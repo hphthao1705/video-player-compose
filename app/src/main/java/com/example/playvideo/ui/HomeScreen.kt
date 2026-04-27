@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,22 +53,22 @@ fun HomeScreen(
 ) {
     val options = listOf(
         HomeOption(
-            title = "Play Video",
-            subtitle = "Stream or play local video files",
+            title = stringResource(R.string.home_option_play_video_title),
+            subtitle = stringResource(R.string.home_option_play_video_subtitle),
             iconRes = R.drawable.ic_play_video,
             iconBgColor = Color(0xFF1A3A5C),
             onClick = onPlayVideo,
         ),
         HomeOption(
-            title = "Trim Video",
-            subtitle = "Cut and trim video to desired length",
+            title = stringResource(R.string.home_option_trim_video_title),
+            subtitle = stringResource(R.string.home_option_trim_video_subtitle),
             iconRes = R.drawable.ic_trim_video,
             iconBgColor = Color(0xFF3D2800),
             onClick = onTrimVideo,
         ),
         HomeOption(
-            title = "Compress Video",
-            subtitle = "Reduce file size while keeping quality",
+            title = stringResource(R.string.home_option_compress_video_title),
+            subtitle = stringResource(R.string.home_option_compress_video_subtitle),
             iconRes = R.drawable.ic_compress_video,
             iconBgColor = Color(0xFF0D2E1A),
             onClick = onCompressVideo,
@@ -86,7 +87,7 @@ fun HomeScreen(
 
         // ── Header ──────────────────────────────────────────────────────────
         Text(
-            text = "PlayVideo",
+            text = stringResource(R.string.app_name),
             color = TextPrimary,
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
@@ -94,7 +95,7 @@ fun HomeScreen(
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "Choose an action to get started",
+            text = stringResource(R.string.home_subtitle),
             color = TextMuted,
             fontSize = 14.sp,
         )
@@ -117,7 +118,7 @@ private fun OptionCard(option: HomeOption) {
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = tween(durationMillis = 120),
-        label = "cardScale",
+        label = stringResource(R.string.home_card_scale_label),
     )
 
     Row(

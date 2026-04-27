@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">PlayVideo</string>
+    <string name="home_option_play_video_title">Play Video</string>
+    <string name="home_option_play_video_subtitle">Stream or play local video files</string>
+    <string name="home_option_trim_video_title">Trim Video</string>
+    <string name="home_option_trim_video_subtitle">Cut and trim video to desired length</string>
+    <string name="home_option_compress_video_title">Compress Video</string>
+    <string name="home_option_compress_video_subtitle">Reduce file size while keeping quality</string>
+    <string name="home_subtitle">Choose an action to get started</string>
+    <string name="home_card_scale_label">cardScale</string>
 </resources>
