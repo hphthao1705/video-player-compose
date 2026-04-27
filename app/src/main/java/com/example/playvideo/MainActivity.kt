@@ -1,38 +1,35 @@
 package com.example.playvideo
 
-import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import com.example.playvideo.data.videos
+import com.example.playvideo.ui.HomeScreen
 
-class MainActivity : AppCompatActivity() {
-
-    private var player: AndroidVideoPlayer? = null
+class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
-        actionBar?.hide()
-
-        //forcing Android to use the GPU to render views instead of the CPU.
-        // => Improves video playback performance
         window.addFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
 
-        //set
-        player = AndroidVideoPlayer(this, findViewById(R.id.player_view))
-
-        val uri = videos.getOrNull(1)
-
-        if(uri.isNullOrBlank()) {
-            Toast.makeText(this, "Video not found", Toast.LENGTH_SHORT).show()
-        } else {
-            player?.playVideo(Uri.parse(uri))
+        setContent {
+            HomeScreen(
+                onPlayVideo = {
+                    // TODO: Navigate to player screen
+                    Toast.makeText(this, "Play Video", Toast.LENGTH_SHORT).show()
+                },
+                onTrimVideo = {
+                    // TODO: Navigate to trim screen
+                    Toast.makeText(this, "Trim Video", Toast.LENGTH_SHORT).show()
+                },
+                onCompressVideo = {
+                    // TODO: Navigate to compress screen
+                    Toast.makeText(this, "Compress Video", Toast.LENGTH_SHORT).show()
+                },
+            )
         }
     }
 }
