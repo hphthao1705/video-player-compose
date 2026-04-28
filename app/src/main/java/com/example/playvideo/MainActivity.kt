@@ -6,19 +6,19 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.playvideo.ui.HomeScreen
 import com.example.playvideo.ui.TrimChooseVideoScreen
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
-    private enum class AppScreen {
-        HOME,
-        CHOOSE_TRIM_VIDEO
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +27,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var currentScreen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
+            val mainViewModel: MainViewModel = hiltViewModel()
+            val availableVideos by mainViewModel.availableVideos.collectAsStateWithLifecycle()
+
+            LaunchedEffect(Unit) {
+                mainViewModel.preloadBuiltInPreviews()
+            }
 
             when (currentScreen) {
                 AppScreen.HOME -> {
@@ -48,6 +54,8 @@ class MainActivity : ComponentActivity() {
                 AppScreen.CHOOSE_TRIM_VIDEO -> {
                     TrimChooseVideoScreen(
                         onBack = { currentScreen = AppScreen.HOME },
+                        availableVideos = availableVideos,
+                        onPreviewLoaded = mainViewModel::cachePreview,
                         onStartTrim = { selectedUri ->
                             // TODO: Navigate to real trim editor with selectedUri.
                             Toast.makeText(
@@ -61,4 +69,9 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+enum class AppScreen {
+    HOME,
+    CHOOSE_TRIM_VIDEO
 }
