@@ -1,6 +1,7 @@
 package com.example.playvideo
 
 import android.app.Application
+import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -38,6 +39,17 @@ class VideoPreviewViewModel @Inject constructor(
         _selectedVideo.update { video }
         _availableVideosUiState.update {
             ChooseVideoUiState.Success(availableVideos.toList())
+        }
+    }
+
+    fun previewLocalVideo(uri: Uri) {
+        viewModelScope.launch {
+            val bitmap = loadPreviewBitmap(getApplication(), uri)
+            availableVideos.replaceAll { it.copy(isSelected = false) }
+            _availableVideosUiState.update { current ->
+                if (current is ChooseVideoUiState.Success) ChooseVideoUiState.Success(availableVideos.toList()) else current
+            }
+            _selectedVideo.update { VideoInfoData(url = uri.toString(), previewBitmap = bitmap) }
         }
     }
 

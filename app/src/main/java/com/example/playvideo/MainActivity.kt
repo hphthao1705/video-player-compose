@@ -1,5 +1,6 @@
 package com.example.playvideo
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Toast
@@ -13,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.example.playvideo.ui.HomeScreen
 import com.example.playvideo.ui.chooseVideo.ChooseVideoScreen
+import com.example.playvideo.ui.trimVideo.TrimVideoScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -28,6 +30,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var currentScreen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
+            var trimVideoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
             when (currentScreen) {
                 AppScreen.HOME -> {
@@ -50,12 +53,16 @@ class MainActivity : ComponentActivity() {
                     ChooseVideoScreen(
                         onBack = { currentScreen = AppScreen.HOME },
                         onStartTrim = { selectedUri ->
-                            Toast.makeText(
-                                this,
-                                "Start trimming: $selectedUri",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            trimVideoUri = selectedUri
+                            currentScreen = AppScreen.TRIM_VIDEO
                         },
+                    )
+                }
+
+                AppScreen.TRIM_VIDEO -> {
+                    TrimVideoScreen(
+                        videoUri = trimVideoUri!!,
+                        onBack = { currentScreen = AppScreen.CHOOSE_TRIM_VIDEO },
                     )
                 }
             }
@@ -65,5 +72,6 @@ class MainActivity : ComponentActivity() {
 
 enum class AppScreen {
     HOME,
-    CHOOSE_TRIM_VIDEO
+    CHOOSE_TRIM_VIDEO,
+    TRIM_VIDEO
 }

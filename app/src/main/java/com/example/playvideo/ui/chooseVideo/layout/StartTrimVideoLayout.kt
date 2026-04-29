@@ -16,18 +16,26 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.playvideo.R
 import com.example.playvideo.data.VideoInfoData
+import com.example.playvideo.util.VideoHelper.printDebugStackTrace
 
 @Composable
 fun StartTrimVideoSection(
     selected: VideoInfoData?,
     onStartTrim: (Uri) -> Unit,
+    onNoVideoSelected: () -> Unit,
 ) {
     Button(
         onClick = {
-            val selectedUri = selected?.url ?: return@Button
-            onStartTrim(selectedUri.toUri())
+            if (selected == null) {
+                onNoVideoSelected()
+            } else {
+                try {
+                    onStartTrim(selected.url.orEmpty().toUri())
+                } catch (e: Exception) {
+                    e.printDebugStackTrace()
+                }
+            }
         },
-        enabled = selected != null,
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp),

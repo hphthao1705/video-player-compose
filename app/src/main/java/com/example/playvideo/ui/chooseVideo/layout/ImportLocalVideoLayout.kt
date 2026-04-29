@@ -2,6 +2,8 @@ package com.example.playvideo.ui.chooseVideo.layout
 
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,10 +16,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.playvideo.R
+import com.example.playvideo.VideoPreviewViewModel
 
 @Composable
-fun ImportLocalVideoSection(pickVideoLauncher: ManagedActivityResultLauncher<String, Uri?>) {
+fun ImportLocalVideoSection() {
+    val viewModel: VideoPreviewViewModel = hiltViewModel()
+    val pickVideoLauncher: ManagedActivityResultLauncher<String, Uri?> = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        uri ?: return@rememberLauncherForActivityResult
+        viewModel.previewLocalVideo(uri)
+    }
+
     Text(
         text = stringResource(R.string.all_built_in_videos_from_videos),
         color = Color(0xFF8EE8A0),
