@@ -16,7 +16,7 @@
     <string name="choose_video_for_trim">Choose video for trim</string>
     <string name="choose_compress_video">Choose compress video</string>
     <string name="back">Back</string>
-    <string name="local_imported_video">Local imported video</string>
     <string name="all_built_in_videos_from_videos">All built-in videos from videos.kt are still working.</string>
+    <string name="please_select_a_video_first">Please select a video first</string>
 
 </resources>
