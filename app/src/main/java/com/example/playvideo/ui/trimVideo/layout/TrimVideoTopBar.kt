@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,7 +31,7 @@ private val TrimColorText = Color.White
 
 @Composable
 fun TrimVideoTopBar(
-    title: String,
+//    title: String,
     isReadyToTrim: Boolean,
     onBackClick: () -> Unit,
     onInfoClick: () -> Unit,
@@ -60,7 +61,7 @@ fun TrimVideoTopBar(
         }
 
         Text(
-            text = title,
+            text = stringResource(R.string.trim_video),
             color = TrimColorText,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
@@ -102,7 +103,7 @@ fun TrimVideoTopBar(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_trim_video),
-                contentDescription = "Trim",
+                contentDescription = stringResource(R.string.trim),
                 tint = iconTint,
                 modifier = Modifier.size(28.dp),
             )

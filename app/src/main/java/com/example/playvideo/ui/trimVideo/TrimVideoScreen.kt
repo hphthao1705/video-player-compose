@@ -18,6 +18,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -35,6 +38,7 @@ import com.example.playvideo.ui.trimVideo.layout.TrimVideoSeekBar
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoTopBar
 import com.example.playvideo.ui.trimVideo.uiModel.TrimVideoUiModel
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoDialogState
+import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
 import com.example.playvideo.util.VideoHelper.debugLog
 import kotlinx.coroutines.launch
 
@@ -43,23 +47,21 @@ private val TrimColorBackground = Color(0xFF0D0D0D)
 @Composable
 fun TrimVideoScreen(
     videoUri: Uri,
-    maxAllowedTrimTime: Long = 45_000L,
     onBack: () -> Unit,
 ) {
     val viewModel: TrimVideoViewModel = viewModel()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val title = stringResource(R.string.trim_video)
     val playbackError = stringResource(R.string.playback_error)
 
 
     var uiModel by remember {
         mutableStateOf(
             TrimVideoUiModel(
-                title = title,
+//                title = title,
                 videoUri = videoUri,
-                maxAllowedTrimTime = maxAllowedTrimTime,
-                endSeekTime = maxAllowedTrimTime,
+//                maxAllowedTrimTime = MAX_ALLOWED_TRIM_TIME,
+                endSeekTime = MAX_ALLOWED_TRIM_TIME,
             )
         )
     }
@@ -85,7 +87,7 @@ fun TrimVideoScreen(
                     uiModel = uiModel.copy(
                         isReadyToTrim = true,
                         videoDurationInMilSecond = player.duration,
-                        endSeekTime = minOf(maxAllowedTrimTime, player.duration),
+                        endSeekTime = minOf(MAX_ALLOWED_TRIM_TIME, player.duration),
                     )
                 }
             }
@@ -104,20 +106,25 @@ fun TrimVideoScreen(
         }
     }
 
-    DisposableEffect(videoUri) {
+    // Capture the list at composition time so onDispose recycles the exact bitmaps
+    // that were live when this effect started, not whatever is in uiModel at dispose time.
+    val bitmapsSnapshot = uiModel.frameBitmaps
+    DisposableEffect(bitmapsSnapshot) {
         onDispose {
-            "DisposableEffect videoUri".debugLog()
-            // when user exit the screen or change video > clear bitmaps memory (RAM)
-            uiModel.frameBitmaps.forEach { bitmap -> bitmap.recycle() }
+            "DisposableEffect bitmaps".debugLog()
+            bitmapsSnapshot.forEach { if (!it.isRecycled) it.recycle() }
         }
     }
 
-    LaunchedEffect(uiModel.seekTo) {
-        val seekTo = uiModel.seekTo
-        if (seekTo >= 0L) {
-            player.seekTo(seekTo)
-            uiModel = uiModel.copy(seekTo = -1L)
-        }
+    // Debounce seeks so ExoPlayer isn't called on every drag pixel (~60/sec).
+    LaunchedEffect(Unit) {
+        snapshotFlow { uiModel.seekTo }
+            .filter { it >= 0L }
+            .debounce(80L)
+            .collect { seekTo ->
+                player.seekTo(seekTo)
+                uiModel = uiModel.copy(seekTo = -1L)
+            }
     }
 
     LaunchedEffect(uiModel.isStopPlayVideo) {
@@ -139,7 +146,7 @@ fun TrimVideoScreen(
                     .background(TrimColorBackground),
             ) {
                 TrimVideoTopBar(
-                    title = uiModel.title,
+//                    title = uiModel.title,
                     isReadyToTrim = uiModel.isReadyToTrim,
                     onBackClick = onBack,
                     onInfoClick = { dialogState = TrimVideoDialogState.Information },
@@ -164,7 +171,7 @@ fun TrimVideoScreen(
                     startSeekTime = uiModel.startSeekTime,
                     endSeekTime = uiModel.endSeekTime,
                     videoDuration = uiModel.videoDurationInMilSecond,
-                    maxTrimTime = uiModel.maxAllowedTrimTime,
+//                    maxTrimTime = uiModel.maxAllowedTrimTime,
                     onStartTimeChange = { newStart ->
                         uiModel = uiModel.copy(startSeekTime = newStart, seekTo = newStart)
                     },

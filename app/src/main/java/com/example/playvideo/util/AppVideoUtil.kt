@@ -9,6 +9,8 @@ import com.example.playvideo.util.MathHelper.toLongOrZero
 import com.example.playvideo.util.VideoHelper.printDebugStackTrace
 
 object AppVideoUtil {
+    const val MAX_ALLOWED_TRIM_TIME = 30_000L // 30 seconds
+
     fun extractVideoFrames(
         context: Context,
         uri: Uri,
