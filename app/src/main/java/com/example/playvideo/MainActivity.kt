@@ -60,10 +60,15 @@ class MainActivity : ComponentActivity() {
                 }
 
                 AppScreen.TRIM_VIDEO -> {
-                    TrimVideoScreen(
-                        videoUri = trimVideoUri!!,
-                        onBack = { currentScreen = AppScreen.CHOOSE_TRIM_VIDEO },
-                    )
+                    val uri = trimVideoUri
+                    if (uri != null) {
+                        TrimVideoScreen(
+                            videoUri = uri,
+                            onBack = { currentScreen = AppScreen.CHOOSE_TRIM_VIDEO },
+                        )
+                    } else {
+                        currentScreen = AppScreen.CHOOSE_TRIM_VIDEO
+                    }
                 }
             }
         }
@@ -73,5 +78,5 @@ class MainActivity : ComponentActivity() {
 enum class AppScreen {
     HOME,
     CHOOSE_TRIM_VIDEO,
-    TRIM_VIDEO
+    TRIM_VIDEO,
 }

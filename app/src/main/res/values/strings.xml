@@ -18,5 +18,15 @@
     <string name="back">Back</string>
     <string name="all_built_in_videos_from_videos">All built-in videos from videos.kt are still working.</string>
     <string name="please_select_a_video_first">Please select a video first</string>
-
+    <string name="trim_video">Trim Video</string>
+    <string name="playback_error">Playback Error</string>
+    <string name="something_went_wrong">Something went wrong</string>
+    <string name="very_fast_but_no_compression">Very fast but no compression</string>
+    <string name="very_fast_but_no_compression_description">Trims by cutting at the nearest keyframe. Very fast, original quality.</string>"
+    <string name="slow_but_compress_well">Slow but compresses well</string>
+    <string name="slow_but_compress_well_description">Re-encodes and compresses the video. Slower but smaller file size.</string>"
+    <string name="trim">Trim</string>
+    <string name="close">Close</string>
+    <string name="warning_description">Please select an option. Tap option 1 for technical details.</string>
+    <string name="video_info">Video Information</string>
 </resources>
