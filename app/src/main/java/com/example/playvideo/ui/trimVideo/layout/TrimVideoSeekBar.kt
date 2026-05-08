@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.playvideo.util.AppDimension.DIMENSION_24
 import com.example.playvideo.util.MathHelper.toTimestamp
 import kotlin.collections.forEach
 
@@ -67,7 +68,7 @@ fun TrimVideoSeekBar(
     if (frameBitmaps.isEmpty()) {
         Box(
             modifier = modifier
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = DIMENSION_24)
                 .height(labelHeight + 4.dp + seekBarHeight),
             contentAlignment = Alignment.Center,
         ) {

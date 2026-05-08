@@ -177,8 +177,6 @@ fun TrimVideoScreen(
             TrimDialog(
                 state = dialogState,
                 videoUri = uiModel.videoUri,
-                videoDuration = uiModel.videoDurationInMilSecond,
-                maxAllowedTrimTime = uiModel.maxAllowedTrimTime,
                 onDismiss = { dialogState = TrimVideoDialogState.StandBy },
                 onTrimConfirm = { option ->
                     dialogState = TrimVideoDialogState.Loading

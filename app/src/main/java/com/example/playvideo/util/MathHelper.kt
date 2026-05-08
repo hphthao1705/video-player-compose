@@ -10,6 +10,10 @@ object MathHelper {
         return "%d:%02d".format(minutes, seconds)
     }
 
+    fun Long?.orZero(): Long {
+        return this ?: 0L
+    }
+
     fun Int.toLongOrNull(): Long? {
         return try {
             this.toLong()

@@ -29,4 +29,8 @@
     <string name="close">Close</string>
     <string name="warning_description">Please select an option. Tap option 1 for technical details.</string>
     <string name="video_info">Video Information</string>
+    <string name="max_allowed_time">Max allowed time</string>
+    <string name="video_duration">Video duration</string>
+    <string name="file_name">File name</string>
+    <string name="unknown">Unknown</string>
 </resources>

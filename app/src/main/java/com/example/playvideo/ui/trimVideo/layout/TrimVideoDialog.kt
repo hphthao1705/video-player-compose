@@ -36,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,17 +46,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.playvideo.R
+import com.example.playvideo.ui.trimVideo.TrimVideoViewModel
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoDialogState
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
+import com.example.playvideo.ui.trimVideo.uiState.VideoNameUiState
+import com.example.playvideo.util.AppDimension.DIMENSION_4
+import com.example.playvideo.util.MathHelper.orZero
 import com.example.playvideo.util.MathHelper.toTimestamp
+import com.example.playvideo.util.shimmerLoading
 
 private val TrimColorPrimary = Color(0xFFF9A825)
 private val TrimColorError = Color(0xFFFF5252)
@@ -67,8 +76,6 @@ private val TrimColorText = Color.White
 fun TrimDialog(
     state: TrimVideoDialogState,
     videoUri: Uri?,
-    videoDuration: Long,
-    maxAllowedTrimTime: Long,
     onDismiss: () -> Unit,
     onTrimConfirm: (TrimVideoOption) -> Unit,
 ) {
@@ -95,8 +102,6 @@ fun TrimDialog(
             DialogWrapper(onDismissRequest = onDismiss) {
                 VideoInformationDialog(
                     videoUri = videoUri,
-                    videoDuration = videoDuration,
-                    maxAllowedTrimTime = maxAllowedTrimTime,
                     onClose = onDismiss,
                 )
             }
@@ -214,10 +219,16 @@ private fun ErrorDialog(
 @Composable
 private fun VideoInformationDialog(
     videoUri: Uri?,
-    videoDuration: Long,
-    maxAllowedTrimTime: Long,
     onClose: () -> Unit,
 ) {
+    val appContext = LocalContext.current.applicationContext
+    val viewModel: TrimVideoViewModel = viewModel()
+    val uiState = viewModel.videoNameState.collectAsState().value
+
+    LaunchedEffect(Unit) {
+        viewModel.getVideoInfo(context = appContext, uri = videoUri)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -232,23 +243,69 @@ private fun VideoInformationDialog(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(16.dp))
-        InfoRow(label = "File name", value = videoUri?.lastPathSegment ?: "Unknown")
-        InfoRow(label = "Video duration", value = videoDuration.toTimestamp())
-        InfoRow(label = "Max allowed time", value = maxAllowedTrimTime.toTimestamp())
+        when (uiState) {
+            is VideoNameUiState.Loading -> {
+                VideoInfoLoading()
+            }
+
+            is VideoNameUiState.Success -> {
+                InfoRow(label = stringResource(R.string.file_name), value = uiState.video.name.orEmpty())
+                InfoRow(label = stringResource(R.string.video_duration), value = uiState.video.duration.orZero().toTimestamp())
+            }
+
+            is VideoNameUiState.Error -> {
+                InfoRow(label = stringResource(R.string.file_name), value = stringResource(R.string.unknown))
+                InfoRow(label = stringResource(R.string.video_duration), value = "00:00")
+            }
+
+            else -> Unit
+        }
         Spacer(Modifier.height(16.dp))
         Box(modifier = Modifier.fillMaxWidth()) {
-            DialogButton(text = "Close", onClick = onClose)
+            DialogButton(text = stringResource(R.string.close), onClick = onClose)
         }
     }
 }
 
 
 @Composable
+private fun VideoInfoLoading() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(DIMENSION_4),
+    ) {
+        repeat(2) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = DIMENSION_4),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(80.dp)
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .shimmerLoading(),
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.6f)
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .shimmerLoading(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun InfoRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = DIMENSION_4),
     ) {
         Text(
             text = "$label: ",
@@ -261,6 +318,8 @@ private fun InfoRow(label: String, value: String) {
             color = TrimColorText,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis // handle for long video name
         )
     }
 }

@@ -16,3 +16,9 @@ data class TrimVideoUiModel(
     val startSeekTime: Long = 0L,
     val endSeekTime: Long = 45_000L,
 )
+
+class LocalVideoUiModel(
+    val name: String? = null,
+    val uri: Uri? = null,
+    val duration: Long? = 0L,
+)

@@ -1,5 +1,7 @@
 package com.example.playvideo.ui.trimVideo.uiState
 
+import com.example.playvideo.ui.trimVideo.uiModel.LocalVideoUiModel
+
 sealed class TrimVideoDialogState {
     data object StandBy : TrimVideoDialogState()
     data object Loading : TrimVideoDialogState()
@@ -19,4 +21,11 @@ sealed class TrimVideoOption {
         val nearestAfterKeyFrame: Long,
     ) : TrimVideoOption()
     data object TrimAndCompress : TrimVideoOption()
+}
+
+sealed class VideoNameUiState {
+    object StandBy: VideoNameUiState()
+    object Loading: VideoNameUiState()
+    object Error: VideoNameUiState()
+    data class Success(val video: LocalVideoUiModel): VideoNameUiState()
 }
