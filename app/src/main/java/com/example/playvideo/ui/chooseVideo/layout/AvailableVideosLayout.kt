@@ -23,14 +23,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.playvideo.R
-import com.example.playvideo.data.VideoInfoData
+import com.example.playvideo.data.AvailableVideoInfoData
 import com.example.playvideo.util.shimmerLoading
 
 @Composable
 fun AvailableVideosSection(
-    videos: List<VideoInfoData>,
-    selectedVideo: VideoInfoData?,
-    onSelectVideo: (VideoInfoData) -> Unit,
+    videos: List<AvailableVideoInfoData>,
+    selectedVideo: AvailableVideoInfoData?,
+    onSelectVideo: (AvailableVideoInfoData) -> Unit,
 ) {
     Text(
         text = stringResource(R.string.or_choose_1_in_5_built_in_videos),

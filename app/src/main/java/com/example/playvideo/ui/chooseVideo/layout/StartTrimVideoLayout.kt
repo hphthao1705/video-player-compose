@@ -15,12 +15,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.example.playvideo.R
-import com.example.playvideo.data.VideoInfoData
+import com.example.playvideo.data.AvailableVideoInfoData
 import com.example.playvideo.util.VideoHelper.printDebugStackTrace
 
 @Composable
 fun StartTrimVideoSection(
-    selected: VideoInfoData?,
+    selected: AvailableVideoInfoData?,
     onStartTrim: (Uri) -> Unit,
     onNoVideoSelected: () -> Unit,
 ) {
