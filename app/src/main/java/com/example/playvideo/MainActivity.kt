@@ -23,7 +23,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
-        videoViewModel.preloadBuiltInPreviews()
+        // TODO: add again when have time
+//        videoViewModel.preloadBuiltInPreviews()
 
         setContent {
             // MainViewModel

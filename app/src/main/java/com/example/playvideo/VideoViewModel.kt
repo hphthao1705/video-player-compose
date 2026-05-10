@@ -11,6 +11,7 @@ import com.example.playvideo.data.AvailableVideoInfoData
 import com.example.playvideo.data.VideoInfoData
 import com.example.playvideo.data.videos
 import com.example.playvideo.ui.chooseVideo.uiState.ChooseVideoUiState
+import com.example.playvideo.util.AppVideoUtil.extractVideoFrames
 import com.example.playvideo.util.AppVideoUtil.getVideoDuration
 import com.example.playvideo.util.AppVideoUtil.getVideoMetaData
 import com.example.playvideo.util.AppVideoUtil.getVideoName
@@ -69,6 +70,11 @@ class VideoViewModel @Inject constructor(
         val videoTitle = getVideoName(context = context, uri = uri)
         val videoDuration = getVideoDuration(context = context, uri = uri)
         val videoMetadata = getVideoMetaData(context = context, inputUri = uri)
+        val previewBitmaps = extractVideoFrames(
+            context = context,
+            uri = uri,
+            frameCount = 8
+        )
 
         return@withContext VideoInfoData(
             name = videoTitle,
@@ -78,7 +84,8 @@ class VideoViewModel @Inject constructor(
             height = videoMetadata.height,
             fps = videoMetadata.fps,
             bitrateKbps = videoMetadata.bitrateKbps,
-            sizeMb = videoMetadata.sizeMb
+            sizeMb = videoMetadata.sizeMb,
+            previewBitmaps = previewBitmaps
         )
     }
 

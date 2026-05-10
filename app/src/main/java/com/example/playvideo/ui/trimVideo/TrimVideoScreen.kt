@@ -43,7 +43,6 @@ import com.example.playvideo.ui.trimVideo.uiState.TrimVideoDialogState
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
 import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
 import com.example.playvideo.util.MathHelper.orZero
-import com.example.playvideo.util.VideoHelper.debugLog
 
 private val TrimColorBackground = Color(0xFF0D0D0D)
 
@@ -53,7 +52,7 @@ fun TrimVideoScreen(
     onBack: () -> Unit,
     onTrimSuccess: (Uri) -> Unit = {},
 ) {
-    val viewModel: TrimVideoViewModel = viewModel()
+    val viewModel: EditVideoViewModel = viewModel()
     val videoViewModel: VideoViewModel = viewModel()
     val context = LocalContext.current
     val playbackError = stringResource(R.string.playback_error)

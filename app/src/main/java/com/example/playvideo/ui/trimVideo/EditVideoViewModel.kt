@@ -21,7 +21,7 @@ import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
-class TrimVideoViewModel @Inject constructor(): ViewModel() {
+class EditVideoViewModel @Inject constructor(): ViewModel() {
     private val _trimResultState = MutableStateFlow<TrimResultUiState>(TrimResultUiState.StandBy)
     val trimResultState = _trimResultState.asStateFlow()
 
