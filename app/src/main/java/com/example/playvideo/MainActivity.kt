@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -16,13 +17,13 @@ import com.example.playvideo.ui.HomeScreen
 import com.example.playvideo.ui.chooseVideo.ChooseVideoScreen
 import com.example.playvideo.ui.trimVideo.TrimVideoScreen
 import com.example.playvideo.ui.trimmedVideo.TrimmedVideoScreen
-import com.example.playvideo.ui.trimVideo.uiState.TrimVideoMode
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val videoPreviewViewModel: VideoPreviewViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,10 +32,10 @@ class MainActivity : ComponentActivity() {
         videoPreviewViewModel.preloadBuiltInPreviews()
 
         setContent {
-            var currentScreen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
+            val currentScreen = viewModel.currentScreen.collectAsState().value
+            val videoOption = viewModel.option.collectAsState().value
             var trimVideoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
             var trimmedVideoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
-            var trimVideoMode by rememberSaveable { mutableStateOf(TrimVideoMode.Trim) }
 
             when (currentScreen) {
                 AppScreen.HOME -> {
@@ -44,22 +45,24 @@ class MainActivity : ComponentActivity() {
                             Toast.makeText(this, "Play Video", Toast.LENGTH_SHORT).show()
                         },
                         onTrimVideo = {
-                            trimVideoMode = TrimVideoMode.Trim
-                            currentScreen = AppScreen.CHOOSE_TRIM_VIDEO
+                            viewModel.updateOption(VideoOption.Trim)
+                            viewModel.updateScreen(AppScreen.CHOOSE_TRIM_VIDEO)
                         },
                         onCompressVideo = {
-                            trimVideoMode = TrimVideoMode.Compress
-                            currentScreen = AppScreen.CHOOSE_TRIM_VIDEO
+                            viewModel.updateOption(VideoOption.Compress)
+                            viewModel.updateScreen(AppScreen.CHOOSE_TRIM_VIDEO)
                         },
                     )
                 }
 
                 AppScreen.CHOOSE_TRIM_VIDEO -> {
                     ChooseVideoScreen(
-                        onBack = { currentScreen = AppScreen.HOME },
+                        onBack = {
+                            viewModel.updateScreen(AppScreen.HOME)
+                        },
                         onStartTrim = { selectedUri ->
                             trimVideoUri = selectedUri
-                            currentScreen = AppScreen.TRIM_VIDEO
+                            viewModel.updateScreen(AppScreen.TRIM_VIDEO)
                         },
                     )
                 }
@@ -69,27 +72,31 @@ class MainActivity : ComponentActivity() {
                     if (uri != null) {
                         TrimVideoScreen(
                             videoUri = uri,
-                            mode = trimVideoMode,
-                            onBack = { currentScreen = AppScreen.CHOOSE_TRIM_VIDEO },
+                            mode = videoOption,
+                            onBack = {
+                                viewModel.updateScreen(AppScreen.CHOOSE_TRIM_VIDEO)
+                            },
                             onTrimSuccess = { resultUri ->
                                 trimmedVideoUri = resultUri
-                                currentScreen = AppScreen.PLAY_TRIMMED_VIDEO
+                                viewModel.updateScreen(AppScreen.PLAY_RESULT_VIDEO)
                             },
                         )
                     } else {
-                        currentScreen = AppScreen.CHOOSE_TRIM_VIDEO
+                        viewModel.updateScreen(AppScreen.CHOOSE_TRIM_VIDEO)
                     }
                 }
 
-                AppScreen.PLAY_TRIMMED_VIDEO -> {
+                AppScreen.PLAY_RESULT_VIDEO -> {
                     val uri = trimmedVideoUri
                     if (uri != null) {
                         TrimmedVideoScreen(
                             videoUri = uri,
-                            onBack = { currentScreen = AppScreen.TRIM_VIDEO },
+                            onBack = {
+                                viewModel.updateScreen(AppScreen.TRIM_VIDEO)
+                            },
                         )
                     } else {
-                        currentScreen = AppScreen.TRIM_VIDEO
+                        viewModel.updateScreen(AppScreen.TRIM_VIDEO)
                     }
                 }
             }
@@ -101,5 +108,5 @@ enum class AppScreen {
     HOME,
     CHOOSE_TRIM_VIDEO,
     TRIM_VIDEO,
-    PLAY_TRIMMED_VIDEO,
+    PLAY_RESULT_VIDEO,
 }

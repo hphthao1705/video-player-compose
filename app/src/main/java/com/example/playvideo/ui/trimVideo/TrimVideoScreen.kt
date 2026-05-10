@@ -32,6 +32,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.playvideo.R
+import com.example.playvideo.VideoOption
 import com.example.playvideo.ui.trimVideo.layout.TrimDialog
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoPlayer
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoSeekBar
@@ -39,7 +40,6 @@ import com.example.playvideo.ui.trimVideo.layout.TrimVideoTopBar
 import com.example.playvideo.ui.trimVideo.uiModel.TrimVideoUiModel
 import com.example.playvideo.ui.trimVideo.uiState.TrimResultUiState
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoDialogState
-import com.example.playvideo.ui.trimVideo.uiState.TrimVideoMode
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
 import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
 import com.example.playvideo.util.VideoHelper.debugLog
@@ -49,7 +49,7 @@ private val TrimColorBackground = Color(0xFF0D0D0D)
 @Composable
 fun TrimVideoScreen(
     videoUri: Uri,
-    mode: TrimVideoMode = TrimVideoMode.Compress,
+    mode: VideoOption = VideoOption.Compress,
     onBack: () -> Unit,
     onTrimSuccess: (Uri) -> Unit = {},
 ) {
@@ -200,15 +200,17 @@ fun TrimVideoScreen(
                     onInfoClick = { dialogState = TrimVideoDialogState.Information },
                     onTrimClick = {
                         when (mode) {
-                            TrimVideoMode.Trim -> {
+                            VideoOption.Trim -> {
 //                                performTrim(TrimVideoOption.TrimExactly)
                                 if (uiModel.videoUri == null) return@TrimVideoTopBar
                                 else {
                                     viewModel.trimVideo(context, uiModel.startSeekTime, uiModel.endSeekTime, uiModel.videoUri!! )
                                 }
                             }
-                            TrimVideoMode.Compress ->
+                            VideoOption.Compress ->
                                 dialogState = TrimVideoDialogState.AskSelectOptionToTrimVideo
+
+                           else -> Unit
                         }
                     },
                 )
