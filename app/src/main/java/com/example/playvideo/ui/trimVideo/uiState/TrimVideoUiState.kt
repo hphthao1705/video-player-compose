@@ -2,16 +2,16 @@ package com.example.playvideo.ui.trimVideo.uiState
 
 import android.net.Uri
 
-sealed class TrimVideoDialogState {
-    data object StandBy : TrimVideoDialogState()
-    data class Loading(val progress: Float = 0f) : TrimVideoDialogState()
-    data class Error(val title: String, val message: String) : TrimVideoDialogState()
-    data object Information : TrimVideoDialogState()
-    data object AskSelectOptionToTrimVideo : TrimVideoDialogState()
+sealed class DialogState {
+    data object StandBy : DialogState()
+    data class Loading(val progress: Float = 0f) : DialogState()
+    data class Error(val title: String, val message: String) : DialogState()
+    data object Information : DialogState()
+    data object AskSelectOptionTo : DialogState()
     data class WarnSelectedNonKeyFrame(
         val nearestBeforeKeyFrame: Long,
         val nearestAfterKeyFrame: Long,
-    ) : TrimVideoDialogState()
+    ) : DialogState()
 }
 
 sealed class TrimVideoOption {
@@ -22,13 +22,6 @@ sealed class TrimVideoOption {
     ) : TrimVideoOption()
     data object TrimAndCompress : TrimVideoOption()
 }
-//
-//sealed class VideoNameUiState {
-//    object StandBy: VideoNameUiState()
-//    object Loading: VideoNameUiState()
-//    object Error: VideoNameUiState()
-//    data class Success(val video: VideoInfoData): VideoNameUiState()
-//}
 
 sealed class TrimResultUiState {
     data object StandBy : TrimResultUiState()

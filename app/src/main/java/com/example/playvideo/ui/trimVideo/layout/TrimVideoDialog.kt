@@ -55,7 +55,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.playvideo.R
 import com.example.playvideo.data.VideoInfoData
-import com.example.playvideo.ui.trimVideo.uiState.TrimVideoDialogState
+import com.example.playvideo.ui.trimVideo.uiState.DialogState
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
 import com.example.playvideo.util.AppDimension.DIMENSION_4
 import com.example.playvideo.util.MathHelper.orZero
@@ -70,21 +70,21 @@ private val TrimColorText = Color.White
 
 @Composable
 fun TrimDialog(
-    state: TrimVideoDialogState,
+    state: DialogState,
     selectedVideoData: VideoInfoData?,
     onDismiss: () -> Unit,
     onTrimConfirm: (TrimVideoOption) -> Unit,
 ) {
     when (state) {
-        TrimVideoDialogState.StandBy -> Unit
+        DialogState.StandBy -> Unit
 
-        is TrimVideoDialogState.Loading -> {
+        is DialogState.Loading -> {
             DialogWrapper(onDismissRequest = {}) {
                 AppLoadingDialog(progress = state.progress, message = "Processing video…")
             }
         }
 
-        is TrimVideoDialogState.Error -> {
+        is DialogState.Error -> {
             DialogWrapper(onDismissRequest = onDismiss) {
                 ErrorDialog(
                     title = state.title,
@@ -94,7 +94,7 @@ fun TrimDialog(
             }
         }
 
-        TrimVideoDialogState.Information -> {
+        DialogState.Information -> {
             DialogWrapper(onDismissRequest = onDismiss) {
                 VideoInformationDialog(
                     selectedVideoData = selectedVideoData,
@@ -103,7 +103,7 @@ fun TrimDialog(
             }
         }
 
-        TrimVideoDialogState.AskSelectOptionToTrimVideo -> {
+        DialogState.AskSelectOptionTo -> {
             DialogWrapper(onDismissRequest = onDismiss) {
                 AskSelectOptionToTrimVideoDialog(
                     onConfirm = onTrimConfirm,
@@ -112,7 +112,7 @@ fun TrimDialog(
             }
         }
 
-        is TrimVideoDialogState.WarnSelectedNonKeyFrame -> {
+        is DialogState.WarnSelectedNonKeyFrame -> {
             DialogWrapper(onDismissRequest = onDismiss) {
                 WarnSelectedNonKeyFrameDialog(
                     nearestBeforeKeyFrame = state.nearestBeforeKeyFrame,

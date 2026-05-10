@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.playvideo.ui.trimVideo.uiState.TrimResultUiState
+import com.example.playvideo.ui.trimVideo.uiState.DialogState
 import com.example.playvideo.util.AppVideoUtil
 import com.example.playvideo.util.AppVideoUtil.extractVideoFrames
 import com.example.playvideo.util.AppVideoUtil.getDefaultOutputFolder
@@ -25,8 +26,15 @@ class EditVideoViewModel @Inject constructor(): ViewModel() {
     private val _trimResultState = MutableStateFlow<TrimResultUiState>(TrimResultUiState.StandBy)
     val trimResultState = _trimResultState.asStateFlow()
 
+    private val _dialogState = MutableStateFlow<DialogState>(DialogState.StandBy)
+    val dialogState = _dialogState.asStateFlow()
+
     fun resetTrimResult() {
         _trimResultState.update { TrimResultUiState.StandBy }
+    }
+
+    fun updateDialogState(state: DialogState) {
+        _dialogState.update { state }
     }
 
     suspend fun getFrameBitmaps(

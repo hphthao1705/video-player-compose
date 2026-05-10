@@ -15,9 +15,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
@@ -39,7 +37,7 @@ import com.example.playvideo.ui.trimVideo.layout.TrimVideoPlayer
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoSeekBar
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoTopBar
 import com.example.playvideo.ui.trimVideo.uiState.TrimResultUiState
-import com.example.playvideo.ui.trimVideo.uiState.TrimVideoDialogState
+import com.example.playvideo.ui.trimVideo.uiState.DialogState
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
 import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
 import com.example.playvideo.util.MathHelper.orZero
@@ -58,10 +56,10 @@ fun TrimVideoScreen(
     val playbackError = stringResource(R.string.playback_error)
     val trimErrorTitle = stringResource(R.string.trim_video)
     val trimResultState by viewModel.trimResultState.collectAsState()
+    val dialogState = viewModel.dialogState.collectAsState().value
 
     val selectedVideo = videoViewModel.selectedVideo.collectAsState().value
 
-    var dialogState by remember { mutableStateOf<TrimVideoDialogState>(TrimVideoDialogState.StandBy) }
     val player = remember(context) {
         ExoPlayer.Builder(context).build().apply { playWhenReady = true }
     }
@@ -95,9 +93,11 @@ fun TrimVideoScreen(
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                dialogState = TrimVideoDialogState.Error(
-                    title = playbackError,
-                    message = error.message ?: "An unknown error occurred.",
+                viewModel.updateDialogState(
+                    DialogState.Error(
+                        title = playbackError,
+                        message = error.message ?: "An unknown error occurred.",
+                    )
                 )
             }
         }
@@ -108,7 +108,7 @@ fun TrimVideoScreen(
         }
     }
 
-    // Debounce seeks so ExoPlayer isn't called on every drag pixel (~60/sec).
+    // debounce seeks so ExoPlayer isn't called on every drag pixel (~60/sec).
     LaunchedEffect(Unit) {
         snapshotFlow { selectedVideo?.seekTo.orZero() }
             .filter { it >= 0L }
@@ -133,17 +133,19 @@ fun TrimVideoScreen(
     LaunchedEffect(trimResultState) {
         when (val state = trimResultState) {
             is TrimResultUiState.Loading -> {
-                dialogState = TrimVideoDialogState.Loading(state.progress)
+                viewModel.updateDialogState(DialogState.Loading(state.progress))
             }
             is TrimResultUiState.Success -> {
-                dialogState = TrimVideoDialogState.StandBy
+                viewModel.updateDialogState(DialogState.StandBy)
                 viewModel.resetTrimResult()
                 onTrimSuccess(state.uri)
             }
             is TrimResultUiState.Error -> {
-                dialogState = TrimVideoDialogState.Error(
-                    title = trimErrorTitle,
-                    message = state.message,
+                viewModel.updateDialogState(
+                    DialogState.Error(
+                        title = trimErrorTitle,
+                        message = state.message,
+                    )
                 )
                 viewModel.resetTrimResult()
             }
@@ -188,7 +190,7 @@ fun TrimVideoScreen(
                 TrimVideoTopBar(
                     isReadyToTrim = selectedVideo?.isReadyToTrim == true,
                     onBackClick = onBack,
-                    onInfoClick = { dialogState = TrimVideoDialogState.Information },
+                    onInfoClick = { viewModel.updateDialogState(DialogState.Information) },
                     onTrimClick = {
                         when (mode) {
                             VideoOption.Trim -> {
@@ -203,7 +205,7 @@ fun TrimVideoScreen(
                                 }
                             }
                             VideoOption.Compress ->
-                                dialogState = TrimVideoDialogState.AskSelectOptionToTrimVideo
+                                viewModel.updateDialogState(DialogState.AskSelectOptionTo)
 
                            else -> Unit
                         }
@@ -244,7 +246,7 @@ fun TrimVideoScreen(
             TrimDialog(
                 state = dialogState,
                 selectedVideoData = selectedVideo,
-                onDismiss = { dialogState = TrimVideoDialogState.StandBy },
+                onDismiss = { viewModel.updateDialogState(DialogState.StandBy) },
                 onTrimConfirm = performTrim,
             )
         }
