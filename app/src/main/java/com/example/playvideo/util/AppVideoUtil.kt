@@ -6,17 +6,20 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.annotation.OptIn
-import androidx.compose.runtime.Composition
-import androidx.compose.runtime.Immutable
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.transformer.Composition
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.TransformationRequest
 import androidx.media3.transformer.Transformer
 import com.example.playvideo.util.MathHelper.toLongOrZero
+import com.example.playvideo.util.VideoHelper.debugLog
 import com.example.playvideo.util.VideoHelper.printDebugStackTrace
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
+import kotlin.coroutines.resume
 
 const val FOLDER_TRIM_VIDEO = "videos/trim"
 object AppVideoUtil {
@@ -108,49 +111,50 @@ object AppVideoUtil {
     }
 
     @OptIn(UnstableApi::class)
-    fun trimVideo(
+    suspend fun trimVideo(
         context: Context,
         startMs: Long,
         endMs: Long,
         uri: Uri,
         outputFile: File,
-        onTrimComplete: (Uri) -> Unit,
-        onTrimError: () -> Unit,
-    ) {
-        val outputFilePath = outputFile.absolutePath
+    ): Result<Uri> = suspendCancellableCoroutine { continuation ->
         /**
          * If the input media format already matches the transformation request for audio or video,
          * Transformer automatically switches to transmuxing
          * copying the compressed samples from the input container to the output container without modification
          */
         val transformer = Transformer.Builder(context)
-            .setVideoMimeType(MimeTypes.VIDEO_H265)
+//            .setVideoMimeType(MimeTypes.VIDEO_H265)
             .setAudioMimeType(MimeTypes.AUDIO_AAC)
             .build()
 
-        transformer.addListener(object: Transformer.Listener {
-            override fun onCompleted(
-                composition: androidx.media3.transformer.Composition,
-                exportResult: ExportResult
-            ) {
-                // get the new uri after trim
-                val trimmedUri: Uri? = Uri.fromFile(outputFile)
-
-                if (trimmedUri != null) {
-                    onTrimComplete(trimmedUri)
-                } else {
-                    onTrimError()
+        val listener = object : Transformer.Listener {
+            override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                if (continuation.isActive) {
+                    continuation.resume(Result.success(Uri.fromFile(outputFile)))
                 }
             }
 
             override fun onError(
-                composition: androidx.media3.transformer.Composition,
+                composition: Composition,
                 exportResult: ExportResult,
-                exportException: ExportException
+                exportException: ExportException,
             ) {
-                onTrimError()
+                exportException.printDebugStackTrace()
+                if (continuation.isActive) {
+                    continuation.resume(Result.failure(exportException))
+                }
             }
-        })
+
+            override fun onFallbackApplied(
+                composition: Composition,
+                originalTransformationRequest: TransformationRequest,
+                fallbackTransformationRequest: TransformationRequest,
+            ) {
+                "Transformer fallback applied: $originalTransformationRequest -> $fallbackTransformationRequest".debugLog()
+            }
+        }
+        transformer.addListener(listener)
 
         // TODO - TH: I see the HDR recommendation, please take a look when have time
 
@@ -164,6 +168,18 @@ object AppVideoUtil {
             .setClippingConfiguration(clippingConfiguration)
             .build()
 
-        transformer.start(mediaItem, outputFilePath)
+        continuation.invokeOnCancellation {
+            transformer.removeListener(listener)
+            transformer.cancel()
+        }
+
+        try {
+            transformer.start(mediaItem, outputFile.absolutePath)
+        } catch (e: Exception) {
+            e.printDebugStackTrace()
+            if (continuation.isActive) {
+                continuation.resume(Result.failure(e))
+            }
+        }
     }
 }

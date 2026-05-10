@@ -67,19 +67,16 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
                 "error when create file: ${e.message}".debugLog()
                 return@launch
             }
-            AppVideoUtil.trimVideo(
+            val result = AppVideoUtil.trimVideo(
                 context = context,
                 startMs = startMs,
                 endMs = endMs,
                 uri = inputUri,
                 outputFile = outputFile,
-                onTrimComplete = { uri ->
-                    "new Uri: $uri".debugLog()
-                },
-                onTrimError = {
-                    "error trim".debugLog()
-                }
             )
+            result
+                .onSuccess { uri -> "new Uri: $uri".debugLog() }
+                .onFailure { e -> "error trim: ${e.message}".debugLog() }
         }
     }
 }
