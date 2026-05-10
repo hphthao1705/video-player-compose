@@ -58,13 +58,15 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
         endMs: Long,
         inputUri: Uri,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             val outputFile = try {
-            File(getDefaultOutputFolder(context = context), "video_output_${System.currentTimeMillis()}.mp4")
-        } catch (e: Exception) {
-            "error when create file: ${e.message}".debugLog()
+                withContext(Dispatchers.IO) {
+                    File(getDefaultOutputFolder(context = context), "video_output_${System.currentTimeMillis()}.mp4")
+                }
+            } catch (e: Exception) {
+                "error when create file: ${e.message}".debugLog()
                 return@launch
-        }
+            }
             AppVideoUtil.trimVideo(
                 context = context,
                 startMs = startMs,
