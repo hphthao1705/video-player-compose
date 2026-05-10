@@ -2,6 +2,7 @@ package com.example.playvideo.util
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.MediaCodecInfo
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -10,10 +11,12 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
+import androidx.media3.transformer.DefaultEncoderFactory
+import androidx.media3.transformer.VideoEncoderSettings
+import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.TransformationRequest
-import androidx.media3.transformer.Transformer
 import com.example.playvideo.util.MathHelper.toLongOrZero
 import com.example.playvideo.util.VideoHelper.debugLog
 import com.example.playvideo.util.VideoHelper.printDebugStackTrace
@@ -115,7 +118,7 @@ object AppVideoUtil {
         context: Context,
         startMs: Long,
         endMs: Long,
-        uri: Uri,
+        inputUri: Uri,
         outputFile: File,
     ): Result<Uri> = suspendCancellableCoroutine { continuation ->
         /**
@@ -124,8 +127,9 @@ object AppVideoUtil {
          * copying the compressed samples from the input container to the output container without modification
          */
         val transformer = Transformer.Builder(context)
+            // TODO: we should ask that is it necessary when trim video only
 //            .setVideoMimeType(MimeTypes.VIDEO_H265)
-            .setAudioMimeType(MimeTypes.AUDIO_AAC)
+//            .setAudioMimeType(MimeTypes.AUDIO_AAC)
             .build()
 
         val listener = object : Transformer.Listener {
@@ -164,7 +168,7 @@ object AppVideoUtil {
             .build()
 
         val mediaItem: MediaItem = MediaItem.Builder()
-            .setUri(uri)
+            .setUri(inputUri)
             .setClippingConfiguration(clippingConfiguration)
             .build()
 
@@ -180,6 +184,94 @@ object AppVideoUtil {
             if (continuation.isActive) {
                 continuation.resume(Result.failure(e))
             }
+        }
+    }
+
+    private fun getBitrate(width: Int, height: Int, frameRate: Float): Int {
+        val bpp = 0.07f // safe for H.264
+        /**
+         * Bitrate = Width x Height x FPS x BPP
+         * BPP from 0.07 -> 0.1: give very good quality (equivalent to high compression standards)
+         * BPP from 0.1 -> 0.15: give high quality (usually used for the original videos)
+         */
+        val calculated: Int = (width * height * frameRate * bpp).toInt()
+        return when {
+            calculated < 1_000_000 -> 1_000_000
+            calculated > 8_000_000 -> 8_000_000
+            else -> calculated
+        }
+    }
+
+    @OptIn(UnstableApi::class)
+    fun compressVideo(
+        context: Context,
+        inputUri: Uri,
+        outputFile: File
+    ) {
+        val retriever = MediaMetadataRetriever()
+        try {
+            // delete after check
+            val originalSize = File(inputUri.path ?: "").length().takeIf { it > 0 }
+                ?: context.contentResolver.openAssetFileDescriptor(inputUri, "r")?.length ?: 0L
+            val originalBitrate = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toLong() ?: 0L
+
+            val currentWidth = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toInt() ?: 0
+            val currentHeight = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toInt() ?: 0
+            val currentFPS = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)?.toFloat() ?: 30f
+
+            val targetBitrate = getBitrate(currentWidth, currentHeight, currentFPS)
+            val outputFilePath = outputFile.absolutePath
+
+            val videoEncoderSettings = VideoEncoderSettings.Builder()
+                .setBitrate(targetBitrate)
+                .setBitrateMode(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR)
+                .build()
+
+            val encoderFactory = DefaultEncoderFactory.Builder(context)
+                .setRequestedVideoEncoderSettings(videoEncoderSettings)
+                .build()
+
+            val transformer = Transformer.Builder(context)
+                .setVideoMimeType(MimeTypes.VIDEO_H264)
+                .setEncoderFactory(encoderFactory)
+                .build()
+
+            transformer.addListener(object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    val compressedSize = outputFile.length()
+                    val reductionPercent = ((originalSize - compressedSize).toDouble() / originalSize * 100).toInt()
+
+                    // Xuất Log so sánh
+                    val logOutput = """
+                    
+                    ========= KẾT QUẢ NÉN VIDEO =========
+                    📌 THÔNG SỐ GỐC:
+                    - Độ phân giải: ${currentWidth}x${currentHeight}
+                    - Bitrate: ${originalBitrate / 1000} Kbps
+                    - Dung lượng: ${originalSize / 1024 / 1024} MB
+                    
+                    🚀 THÔNG SỐ SAU NÉN:
+                    - Target Bitrate set: ${targetBitrate / 1000} Kbps
+                    - Dung lượng mới: ${compressedSize / 1024 / 1024} MB
+                    
+                    📉 HIỆU QUẢ: Giảm $reductionPercent% dung lượng!
+                    =====================================
+                """.trimIndent()
+
+                    logOutput.debugLog() // Dùng hàm debugLog của bạn
+                }
+
+                override fun onError(composition: Composition, exportResult: ExportResult, e: ExportException) {
+                    "Lỗi khi nén: ${e.message}".debugLog()
+                }
+            })
+
+            val mediaItem = MediaItem.fromUri(inputUri)
+            transformer.start(mediaItem, outputFilePath)
+        } catch (e: Exception) {
+            e.printDebugStackTrace()
+        } finally {
+            retriever.release()
         }
     }
 }

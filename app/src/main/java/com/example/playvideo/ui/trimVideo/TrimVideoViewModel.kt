@@ -81,7 +81,7 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
                 context = context,
                 startMs = startMs,
                 endMs = endMs,
-                uri = inputUri,
+                inputUri = inputUri,
                 outputFile = outputFile,
             )
             result
