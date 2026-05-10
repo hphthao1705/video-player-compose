@@ -69,12 +69,6 @@ fun TrimVideoScreen(
             // prepare for player first (faster)
             player.setMediaItem(MediaItem.fromUri(uri))
             player.prepare()
-
-            // get bitmaps
-            val bitmaps = viewModel.getFrameBitmaps(context, uri)
-            videoViewModel.updateSelectedVideo { currentVideo ->
-                currentVideo.copy(previewBitmaps = bitmaps)
-            }
         }
     }
 

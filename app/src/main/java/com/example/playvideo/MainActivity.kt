@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
 import com.example.playvideo.ui.HomeScreen
 import com.example.playvideo.ui.chooseVideo.ChooseVideoScreen
 import com.example.playvideo.ui.trimVideo.TrimVideoScreen
@@ -27,6 +28,8 @@ class MainActivity : ComponentActivity() {
 //        videoViewModel.preloadBuiltInPreviews()
 
         setContent {
+            val context = LocalContext.current
+
             // MainViewModel
             val currentScreen = viewModel.currentScreen.collectAsState().value
             val finalVideo = viewModel.finalVideo.collectAsState().value
@@ -60,7 +63,7 @@ class MainActivity : ComponentActivity() {
                         },
                         onStartTrim = { selectedUri ->
                             videoViewModel.changeSelectedVideo(
-                                context = applicationContext,
+                                context = context,
                                 uri = selectedUri
                             )
                             viewModel.updateScreen(AppScreen.TRIM_VIDEO)
