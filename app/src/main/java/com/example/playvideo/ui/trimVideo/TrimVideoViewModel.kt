@@ -9,6 +9,8 @@ import com.example.playvideo.ui.trimVideo.uiModel.LocalVideoUiModel
 import com.example.playvideo.ui.trimVideo.uiState.VideoNameUiState
 import com.example.playvideo.util.AppVideoUtil
 import com.example.playvideo.util.AppVideoUtil.extractVideoFrames
+import com.example.playvideo.util.AppVideoUtil.getDefaultOutputFolder
+import com.example.playvideo.util.VideoHelper.debugLog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -46,6 +49,35 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
                 name = videoName,
                 duration = videoDuration
             )) }
+        }
+    }
+
+    fun trimVideo(
+        context: Context,
+        startMs: Long,
+        endMs: Long,
+        inputUri: Uri,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val outputFile = try {
+            File(getDefaultOutputFolder(context = context), "video_output_${System.currentTimeMillis()}.mp4")
+        } catch (e: Exception) {
+            "error when create file: ${e.message}".debugLog()
+                return@launch
+        }
+            AppVideoUtil.trimVideo(
+                context = context,
+                startMs = startMs,
+                endMs = endMs,
+                uri = inputUri,
+                outputFile = outputFile,
+                onTrimComplete = { uri ->
+                    "new Uri: $uri".debugLog()
+                },
+                onTrimError = {
+                    "error trim".debugLog()
+                }
+            )
         }
     }
 }

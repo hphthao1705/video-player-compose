@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import com.example.playvideo.ui.HomeScreen
 import com.example.playvideo.ui.chooseVideo.ChooseVideoScreen
 import com.example.playvideo.ui.trimVideo.TrimVideoScreen
+import com.example.playvideo.ui.trimVideo.uiState.TrimVideoMode
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -31,6 +32,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             var currentScreen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
             var trimVideoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+            var trimVideoMode by rememberSaveable { mutableStateOf(TrimVideoMode.Trim) }
 
             when (currentScreen) {
                 AppScreen.HOME -> {
@@ -40,9 +42,11 @@ class MainActivity : ComponentActivity() {
                             Toast.makeText(this, "Play Video", Toast.LENGTH_SHORT).show()
                         },
                         onTrimVideo = {
+                            trimVideoMode = TrimVideoMode.Trim
                             currentScreen = AppScreen.CHOOSE_TRIM_VIDEO
                         },
                         onCompressVideo = {
+                            trimVideoMode = TrimVideoMode.Compress
                             // TODO: Navigate to compress screen
                             Toast.makeText(this, "Compress Video", Toast.LENGTH_SHORT).show()
                         },
@@ -64,6 +68,7 @@ class MainActivity : ComponentActivity() {
                     if (uri != null) {
                         TrimVideoScreen(
                             videoUri = uri,
+                            mode = trimVideoMode,
                             onBack = { currentScreen = AppScreen.CHOOSE_TRIM_VIDEO },
                         )
                     } else {

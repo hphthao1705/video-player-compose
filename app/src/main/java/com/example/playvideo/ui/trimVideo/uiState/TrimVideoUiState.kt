@@ -23,6 +23,11 @@ sealed class TrimVideoOption {
     data object TrimAndCompress : TrimVideoOption()
 }
 
+enum class TrimVideoMode {
+    Trim,
+    Compress,
+}
+
 sealed class VideoNameUiState {
     object StandBy: VideoNameUiState()
     object Loading: VideoNameUiState()

@@ -5,11 +5,30 @@ import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.annotation.OptIn
+import androidx.compose.runtime.Composition
+import androidx.compose.runtime.Immutable
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Transformer
 import com.example.playvideo.util.MathHelper.toLongOrZero
 import com.example.playvideo.util.VideoHelper.printDebugStackTrace
+import java.io.File
 
+const val FOLDER_TRIM_VIDEO = "videos/trim"
 object AppVideoUtil {
     const val MAX_ALLOWED_TRIM_TIME = 30_000L // 30 seconds
+
+    fun getDefaultOutputFolder(context: Context) : File {
+        val file = File(context.cacheDir, FOLDER_TRIM_VIDEO)
+        if (!file.exists()) {
+            file.mkdirs()
+        }
+        return file
+    }
 
     fun extractVideoFrames(
         context: Context,
@@ -86,5 +105,65 @@ object AppVideoUtil {
         } finally {
             retriever.release()
         }
+    }
+
+    @OptIn(UnstableApi::class)
+    fun trimVideo(
+        context: Context,
+        startMs: Long,
+        endMs: Long,
+        uri: Uri,
+        outputFile: File,
+        onTrimComplete: (Uri) -> Unit,
+        onTrimError: () -> Unit,
+    ) {
+        val outputFilePath = outputFile.absolutePath
+        /**
+         * If the input media format already matches the transformation request for audio or video,
+         * Transformer automatically switches to transmuxing
+         * copying the compressed samples from the input container to the output container without modification
+         */
+        val transformer = Transformer.Builder(context)
+            .setVideoMimeType(MimeTypes.VIDEO_H265)
+            .setAudioMimeType(MimeTypes.AUDIO_AAC)
+            .build()
+
+        transformer.addListener(object: Transformer.Listener {
+            override fun onCompleted(
+                composition: androidx.media3.transformer.Composition,
+                exportResult: ExportResult
+            ) {
+                // get the new uri after trim
+                val trimmedUri: Uri? = Uri.fromFile(outputFile)
+
+                if (trimmedUri != null) {
+                    onTrimComplete(trimmedUri)
+                } else {
+                    onTrimError()
+                }
+            }
+
+            override fun onError(
+                composition: androidx.media3.transformer.Composition,
+                exportResult: ExportResult,
+                exportException: ExportException
+            ) {
+                onTrimError()
+            }
+        })
+
+        // TODO - TH: I see the HDR recommendation, please take a look when have time
+
+        val clippingConfiguration = MediaItem.ClippingConfiguration.Builder()
+            .setStartPositionMs(startMs)
+            .setEndPositionMs(endMs)
+            .build()
+
+        val mediaItem: MediaItem = MediaItem.Builder()
+            .setUri(uri)
+            .setClippingConfiguration(clippingConfiguration)
+            .build()
+
+        transformer.start(mediaItem, outputFilePath)
     }
 }

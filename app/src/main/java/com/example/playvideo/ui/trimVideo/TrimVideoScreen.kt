@@ -38,6 +38,8 @@ import com.example.playvideo.ui.trimVideo.layout.TrimVideoSeekBar
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoTopBar
 import com.example.playvideo.ui.trimVideo.uiModel.TrimVideoUiModel
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoDialogState
+import com.example.playvideo.ui.trimVideo.uiState.TrimVideoMode
+import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
 import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
 import com.example.playvideo.util.VideoHelper.debugLog
 import kotlinx.coroutines.launch
@@ -47,13 +49,13 @@ private val TrimColorBackground = Color(0xFF0D0D0D)
 @Composable
 fun TrimVideoScreen(
     videoUri: Uri,
+    mode: TrimVideoMode = TrimVideoMode.Compress,
     onBack: () -> Unit,
 ) {
     val viewModel: TrimVideoViewModel = viewModel()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val playbackError = stringResource(R.string.playback_error)
-
 
     var uiModel by remember {
         mutableStateOf(
@@ -134,6 +136,14 @@ fun TrimVideoScreen(
         }
     }
 
+    val performTrim: (TrimVideoOption) -> Unit = { option ->
+        dialogState = TrimVideoDialogState.Loading
+        scope.launch {
+            // TODO: implement trim via Media3 Transformer
+            dialogState = TrimVideoDialogState.StandBy
+        }
+    }
+
     Scaffold(containerColor = TrimColorBackground) { innerPadding ->
         Box(
             modifier = Modifier
@@ -150,7 +160,19 @@ fun TrimVideoScreen(
                     isReadyToTrim = uiModel.isReadyToTrim,
                     onBackClick = onBack,
                     onInfoClick = { dialogState = TrimVideoDialogState.Information },
-                    onTrimClick = { dialogState = TrimVideoDialogState.AskSelectOptionToTrimVideo },
+                    onTrimClick = {
+                        when (mode) {
+                            TrimVideoMode.Trim -> {
+//                                performTrim(TrimVideoOption.TrimExactly)
+                                if (uiModel.videoUri == null) return@TrimVideoTopBar
+                                else {
+                                    viewModel.trimVideo(context, uiModel.startSeekTime, uiModel.endSeekTime, uiModel.videoUri!! )
+                                }
+                            }
+                            TrimVideoMode.Compress ->
+                                dialogState = TrimVideoDialogState.AskSelectOptionToTrimVideo
+                        }
+                    },
                 )
 
                 Spacer(Modifier.height(16.dp))
@@ -185,13 +207,7 @@ fun TrimVideoScreen(
                 state = dialogState,
                 videoUri = uiModel.videoUri,
                 onDismiss = { dialogState = TrimVideoDialogState.StandBy },
-                onTrimConfirm = { option ->
-                    dialogState = TrimVideoDialogState.Loading
-                    scope.launch {
-                        // TODO: implement trim via Media3 Transformer
-                        dialogState = TrimVideoDialogState.StandBy
-                    }
-                },
+                onTrimConfirm = performTrim,
             )
         }
     }
