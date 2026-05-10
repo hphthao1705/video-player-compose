@@ -49,8 +49,7 @@ class MainActivity : ComponentActivity() {
                         },
                         onCompressVideo = {
                             trimVideoMode = TrimVideoMode.Compress
-                            // TODO: Navigate to compress screen
-                            Toast.makeText(this, "Compress Video", Toast.LENGTH_SHORT).show()
+                            currentScreen = AppScreen.CHOOSE_TRIM_VIDEO
                         },
                     )
                 }

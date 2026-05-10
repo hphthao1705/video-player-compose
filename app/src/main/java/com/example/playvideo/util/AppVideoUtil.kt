@@ -20,7 +20,9 @@ import androidx.media3.transformer.TransformationRequest
 import com.example.playvideo.util.MathHelper.toLongOrZero
 import com.example.playvideo.util.VideoHelper.debugLog
 import com.example.playvideo.util.VideoHelper.printDebugStackTrace
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.resume
 
@@ -202,91 +204,119 @@ object AppVideoUtil {
         }
     }
 
+    private data class VideoMetadata(
+        val width: Int,
+        val height: Int,
+        val fps: Float,
+        val bitrateKbps: Long,
+        val sizeMb: Double,
+    )
+
+    private suspend fun readVideoMetadata(context: Context, inputUri: Uri): VideoMetadata =
+        withContext(Dispatchers.IO) {
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(context, inputUri)
+                val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toInt() ?: 0
+                val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toInt() ?: 0
+                val fps = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)?.toFloat() ?: 30f
+                val bitrateKbps = (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toLong() ?: 0L) / 1000
+                val sizeMb = (File(inputUri.path ?: "").length().takeIf { it > 0 }
+                    ?: context.contentResolver.openAssetFileDescriptor(inputUri, "r")?.use { it.length } ?: 0L)
+                    .toDouble() / 1024 / 1024
+                VideoMetadata(width, height, fps, bitrateKbps, sizeMb)
+            } finally {
+                retriever.release()
+            }
+        }
+
     @OptIn(UnstableApi::class)
     suspend fun compressVideo(
         context: Context,
         inputUri: Uri,
         outputFile: File,
-    ): Result<Uri> = suspendCancellableCoroutine { continuation ->
-        val retriever = MediaMetadataRetriever()
-        try {
-            retriever.setDataSource(context, inputUri)
-            val originalWidth = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toInt() ?: 0
-            val originalHeight = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toInt() ?: 0
-            val originalFPS = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)?.toFloat() ?: 30f
-            val originalBitrateKbps = (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toLong() ?: 0L) / 1000
-            val originalSizeMb = (File(inputUri.path ?: "").length().takeIf { it > 0 }
-                ?: context.contentResolver.openAssetFileDescriptor(inputUri, "r")?.use { it.length } ?: 0L).toDouble() / 1024 / 1024
-            val targetBitrate = getBitrate(originalWidth, originalHeight, originalFPS)
+    ): Result<Uri> {
+        val meta = try {
+            readVideoMetadata(context, inputUri)
+        } catch (e: Exception) {
+            e.printDebugStackTrace()
+            return Result.failure(e)
+        }
 
-            """
-            ======= COMPRESS VIDEO - BEFORE =======
-            Resolution : ${originalWidth}x${originalHeight}
-            FPS        : $originalFPS
-            Bitrate    : ${originalBitrateKbps} Kbps
-            Size       : ${"%.2f".format(originalSizeMb)} MB
-            Target bitrate: ${targetBitrate / 1000} Kbps
-            =======================================
-            """.trimIndent().debugLog()
+        val targetBitrate = getBitrate(meta.width, meta.height, meta.fps)
 
-            val videoEncoderSettings = VideoEncoderSettings.Builder()
-                .setBitrate(targetBitrate)
-                .setBitrateMode(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR)
-                .build()
+        """
+        ======= COMPRESS VIDEO - BEFORE =======
+        Resolution : ${meta.width}x${meta.height}
+        FPS        : ${meta.fps}
+        Bitrate    : ${meta.bitrateKbps} Kbps
+        Size       : ${"%.2f".format(meta.sizeMb)} MB
+        Target bitrate: ${targetBitrate / 1000} Kbps
+        =======================================
+        """.trimIndent().debugLog()
 
-            val encoderFactory = DefaultEncoderFactory.Builder(context)
-                .setRequestedVideoEncoderSettings(videoEncoderSettings)
-                .build()
+        // Transformer must be created and started on the main thread.
+        return withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine { continuation ->
+                val videoEncoderSettings = VideoEncoderSettings.Builder()
+                    .setBitrate(targetBitrate)
+                    .setBitrateMode(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR)
+                    .build()
 
-            val transformer = Transformer.Builder(context)
-                .setVideoMimeType(MimeTypes.VIDEO_H264)
-                .setEncoderFactory(encoderFactory)
-                .build()
+                val encoderFactory = DefaultEncoderFactory.Builder(context)
+                    .setRequestedVideoEncoderSettings(videoEncoderSettings)
+                    .build()
 
-            val listener = object : Transformer.Listener {
-                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    val compressedSizeMb = outputFile.length().toDouble() / 1024 / 1024
-                    val compressedBitrateKbps = exportResult.averageAudioBitrate.takeIf { it > 0 }
-                        ?.let { exportResult.averageVideoBitrate / 1000 } ?: (targetBitrate / 1000)
-                    val reductionPct = if (originalSizeMb > 0)
-                        ((originalSizeMb - compressedSizeMb) / originalSizeMb * 100).toInt() else 0
+                val transformer = Transformer.Builder(context)
+                    .setVideoMimeType(MimeTypes.VIDEO_H264)
+                    .setEncoderFactory(encoderFactory)
+                    .build()
 
-                    """
-                    ======= COMPRESS VIDEO - AFTER ========
-                    Size       : ${"%.2f".format(compressedSizeMb)} MB  (was ${"%.2f".format(originalSizeMb)} MB)
-                    Bitrate    : ${compressedBitrateKbps} Kbps  (was ${originalBitrateKbps} Kbps)
-                    Reduction  : ${reductionPct}%
-                    Output     : ${outputFile.absolutePath}
-                    =======================================
-                    """.trimIndent().debugLog()
+                val listener = object : Transformer.Listener {
+                    override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                        val compressedSizeMb = outputFile.length().toDouble() / 1024 / 1024
+                        val compressedBitrateKbps = exportResult.averageAudioBitrate.takeIf { it > 0 }
+                            ?.let { exportResult.averageVideoBitrate / 1000 } ?: (targetBitrate / 1000)
+                        val reductionPct = if (meta.sizeMb > 0)
+                            ((meta.sizeMb - compressedSizeMb) / meta.sizeMb * 100).toInt() else 0
 
-                    if (continuation.isActive) {
-                        continuation.resume(Result.success(Uri.fromFile(outputFile)))
+                        """
+                        ======= COMPRESS VIDEO - AFTER ========
+                        Size       : ${"%.2f".format(compressedSizeMb)} MB  (was ${"%.2f".format(meta.sizeMb)} MB)
+                        Bitrate    : ${compressedBitrateKbps} Kbps  (was ${meta.bitrateKbps} Kbps)
+                        Reduction  : ${reductionPct}%
+                        Output     : ${outputFile.absolutePath}
+                        =======================================
+                        """.trimIndent().debugLog()
+
+                        if (continuation.isActive) {
+                            continuation.resume(Result.success(Uri.fromFile(outputFile)))
+                        }
+                    }
+
+                    override fun onError(composition: Composition, exportResult: ExportResult, e: ExportException) {
+                        e.printDebugStackTrace()
+                        if (continuation.isActive) {
+                            continuation.resume(Result.failure(e))
+                        }
                     }
                 }
+                transformer.addListener(listener)
 
-                override fun onError(composition: Composition, exportResult: ExportResult, e: ExportException) {
+                continuation.invokeOnCancellation {
+                    transformer.removeListener(listener)
+                    transformer.cancel()
+                }
+
+                try {
+                    transformer.start(MediaItem.fromUri(inputUri), outputFile.absolutePath)
+                } catch (e: Exception) {
                     e.printDebugStackTrace()
                     if (continuation.isActive) {
                         continuation.resume(Result.failure(e))
                     }
                 }
             }
-            transformer.addListener(listener)
-
-            continuation.invokeOnCancellation {
-                transformer.removeListener(listener)
-                transformer.cancel()
-            }
-
-            transformer.start(MediaItem.fromUri(inputUri), outputFile.absolutePath)
-        } catch (e: Exception) {
-            e.printDebugStackTrace()
-            if (continuation.isActive) {
-                continuation.resume(Result.failure(e))
-            }
-        } finally {
-            retriever.release()
         }
     }
 }
