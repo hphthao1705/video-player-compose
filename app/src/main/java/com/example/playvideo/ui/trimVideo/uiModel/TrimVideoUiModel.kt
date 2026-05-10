@@ -20,4 +20,6 @@ class LocalVideoUiModel(
     val name: String? = null,
     val uri: Uri? = null,
     val duration: Long? = 0L,
+    val width: Int? = null,
+    val height: Int? = null
 )

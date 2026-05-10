@@ -2,6 +2,7 @@ package com.example.playvideo.util
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.MediaCodecInfo
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -10,14 +11,23 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
+import androidx.media3.transformer.DefaultEncoderFactory
+import androidx.media3.transformer.VideoEncoderSettings
+import androidx.media3.transformer.ProgressHolder
+import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.TransformationRequest
-import androidx.media3.transformer.Transformer
 import com.example.playvideo.util.MathHelper.toLongOrZero
 import com.example.playvideo.util.VideoHelper.debugLog
 import com.example.playvideo.util.VideoHelper.printDebugStackTrace
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.resume
 
@@ -115,7 +125,7 @@ object AppVideoUtil {
         context: Context,
         startMs: Long,
         endMs: Long,
-        uri: Uri,
+        inputUri: Uri,
         outputFile: File,
     ): Result<Uri> = suspendCancellableCoroutine { continuation ->
         /**
@@ -124,8 +134,9 @@ object AppVideoUtil {
          * copying the compressed samples from the input container to the output container without modification
          */
         val transformer = Transformer.Builder(context)
+            // TODO: we should ask that is it necessary when trim video only
 //            .setVideoMimeType(MimeTypes.VIDEO_H265)
-            .setAudioMimeType(MimeTypes.AUDIO_AAC)
+//            .setAudioMimeType(MimeTypes.AUDIO_AAC)
             .build()
 
         val listener = object : Transformer.Listener {
@@ -164,7 +175,7 @@ object AppVideoUtil {
             .build()
 
         val mediaItem: MediaItem = MediaItem.Builder()
-            .setUri(uri)
+            .setUri(inputUri)
             .setClippingConfiguration(clippingConfiguration)
             .build()
 
@@ -179,6 +190,166 @@ object AppVideoUtil {
             e.printDebugStackTrace()
             if (continuation.isActive) {
                 continuation.resume(Result.failure(e))
+            }
+        }
+    }
+
+    private fun getBitrate(width: Int, height: Int, frameRate: Float): Int {
+        val bpp = 0.07f // safe for H.264
+        /**
+         * Bitrate = Width x Height x FPS x BPP
+         * BPP from 0.07 -> 0.1: give very good quality (equivalent to high compression standards)
+         * BPP from 0.1 -> 0.15: give high quality (usually used for the original videos)
+         */
+        val calculated: Int = (width * height * frameRate * bpp).toInt()
+        return when {
+            calculated < 1_000_000 -> 1_000_000
+            calculated > 8_000_000 -> 8_000_000
+            else -> calculated
+        }
+    }
+
+    private data class VideoMetadata(
+        val width: Int,
+        val height: Int,
+        val fps: Float,
+        val bitrateKbps: Long,
+        val sizeMb: Double,
+    )
+
+    private suspend fun readVideoMetadata(context: Context, inputUri: Uri): VideoMetadata =
+        withContext(Dispatchers.IO) {
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(context, inputUri)
+                val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toInt() ?: 0
+                val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toInt() ?: 0
+                val fps = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)?.toFloat() ?: 30f
+                val bitrateKbps = (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toLong() ?: 0L) / 1000
+                val sizeMb = (File(inputUri.path ?: "").length().takeIf { it > 0 }
+                    ?: context.contentResolver.openAssetFileDescriptor(inputUri, "r")?.use { it.length } ?: 0L)
+                    .toDouble() / 1024 / 1024
+                VideoMetadata(width, height, fps, bitrateKbps, sizeMb)
+            } finally {
+                retriever.release()
+            }
+        }
+
+    @OptIn(UnstableApi::class)
+    suspend fun compressVideo(
+        context: Context,
+        inputUri: Uri,
+        startMs: Long,
+        endMs: Long,
+        outputFile: File,
+        onProgress: (Float) -> Unit = {},
+    ): Result<Uri> {
+        val meta = try {
+            readVideoMetadata(context, inputUri)
+        } catch (e: Exception) {
+            e.printDebugStackTrace()
+            return Result.failure(e)
+        }
+
+        val targetBitrate = getBitrate(meta.width, meta.height, meta.fps)
+
+        """
+        ======= COMPRESS VIDEO - BEFORE =======
+        Resolution : ${meta.width}x${meta.height}
+        FPS        : ${meta.fps}
+        Bitrate    : ${meta.bitrateKbps} Kbps
+        Size       : ${"%.2f".format(meta.sizeMb)} MB
+        Target bitrate: ${targetBitrate / 1000} Kbps
+        =======================================
+        """.trimIndent().debugLog()
+
+        // Transformer must be created and started on the main thread.
+        return withContext(Dispatchers.Main) {
+            suspendCancellableCoroutine { continuation ->
+                val videoEncoderSettings = VideoEncoderSettings.Builder()
+                    .setBitrate(targetBitrate)
+                    .setBitrateMode(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR)
+                    .build()
+
+                val encoderFactory = DefaultEncoderFactory.Builder(context)
+                    .setRequestedVideoEncoderSettings(videoEncoderSettings)
+                    .build()
+
+                val transformer = Transformer.Builder(context)
+                    .setVideoMimeType(MimeTypes.VIDEO_H264)
+                    .setEncoderFactory(encoderFactory)
+                    .build()
+
+                var progressJob: kotlinx.coroutines.Job? = null
+
+                val listener = object : Transformer.Listener {
+                    override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                        progressJob?.cancel()
+                        val compressedSizeMb = outputFile.length().toDouble() / 1024 / 1024
+                        val compressedBitrateKbps = exportResult.averageAudioBitrate.takeIf { it > 0 }
+                            ?.let { exportResult.averageVideoBitrate / 1000 } ?: (targetBitrate / 1000)
+                        val reductionPct = if (meta.sizeMb > 0)
+                            ((meta.sizeMb - compressedSizeMb) / meta.sizeMb * 100).toInt() else 0
+
+                        """
+                        ======= COMPRESS VIDEO - AFTER ========
+                        Size       : ${"%.2f".format(compressedSizeMb)} MB  (was ${"%.2f".format(meta.sizeMb)} MB)
+                        Bitrate    : ${compressedBitrateKbps} Kbps  (was ${meta.bitrateKbps} Kbps)
+                        Reduction  : ${reductionPct}%
+                        Output     : ${outputFile.absolutePath}
+                        =======================================
+                        """.trimIndent().debugLog()
+
+                        if (continuation.isActive) {
+                            continuation.resume(Result.success(Uri.fromFile(outputFile)))
+                        }
+                    }
+
+                    override fun onError(composition: Composition, exportResult: ExportResult, e: ExportException) {
+                        progressJob?.cancel()
+                        e.printDebugStackTrace()
+                        if (continuation.isActive) {
+                            continuation.resume(Result.failure(e))
+                        }
+                    }
+                }
+                transformer.addListener(listener)
+
+                continuation.invokeOnCancellation {
+                    progressJob?.cancel()
+                    transformer.removeListener(listener)
+                    transformer.cancel()
+                }
+
+                try {
+                    val clippingConfiguration = MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(startMs)
+                        .setEndPositionMs(endMs)
+                        .build()
+
+                    val mediaItem: MediaItem = MediaItem.Builder()
+                        .setUri(inputUri)
+                        .setClippingConfiguration(clippingConfiguration)
+                        .build()
+
+                    transformer.start(mediaItem, outputFile.absolutePath)
+
+                    // Poll Transformer.getProgress() on the main thread every 200 ms.
+                    val holder = ProgressHolder()
+                    progressJob = CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
+                        while (true) {
+                            delay(200)
+                            if (transformer.getProgress(holder) == Transformer.PROGRESS_STATE_AVAILABLE) {
+                                onProgress(holder.progress / 100f)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printDebugStackTrace()
+                    if (continuation.isActive) {
+                        continuation.resume(Result.failure(e))
+                    }
+                }
             }
         }
     }

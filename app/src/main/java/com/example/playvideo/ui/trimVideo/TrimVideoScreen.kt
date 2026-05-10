@@ -17,7 +17,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.debounce
@@ -44,7 +43,6 @@ import com.example.playvideo.ui.trimVideo.uiState.TrimVideoMode
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
 import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
 import com.example.playvideo.util.VideoHelper.debugLog
-import kotlinx.coroutines.launch
 
 private val TrimColorBackground = Color(0xFF0D0D0D)
 
@@ -57,7 +55,6 @@ fun TrimVideoScreen(
 ) {
     val viewModel: TrimVideoViewModel = viewModel()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val playbackError = stringResource(R.string.playback_error)
     val trimErrorTitle = stringResource(R.string.trim_video)
     val trimResultState by viewModel.trimResultState.collectAsState()
@@ -143,8 +140,8 @@ fun TrimVideoScreen(
 
     LaunchedEffect(trimResultState) {
         when (val state = trimResultState) {
-            TrimResultUiState.Loading -> {
-                dialogState = TrimVideoDialogState.Loading
+            is TrimResultUiState.Loading -> {
+                dialogState = TrimVideoDialogState.Loading(state.progress)
             }
             is TrimResultUiState.Success -> {
                 dialogState = TrimVideoDialogState.StandBy
@@ -163,10 +160,25 @@ fun TrimVideoScreen(
     }
 
     val performTrim: (TrimVideoOption) -> Unit = { option ->
-        dialogState = TrimVideoDialogState.Loading
-        scope.launch {
-            // TODO: implement trim via Media3 Transformer
-            dialogState = TrimVideoDialogState.StandBy
+        when (option) {
+            TrimVideoOption.TrimExactly -> viewModel.trimVideo(
+                context = context,
+                startMs = uiModel.startSeekTime,
+                endMs = uiModel.endSeekTime,
+                inputUri = videoUri,
+            )
+            is TrimVideoOption.TrimInexactly -> viewModel.trimVideo(
+                context = context,
+                startMs = option.nearestBeforeKeyFrame,
+                endMs = option.nearestAfterKeyFrame,
+                inputUri = videoUri,
+            )
+            TrimVideoOption.TrimAndCompress -> viewModel.compressVideo(
+                context = context,
+                startMs = uiModel.startSeekTime,
+                endMs = uiModel.endSeekTime,
+                inputUri = videoUri
+            )
         }
     }
 
