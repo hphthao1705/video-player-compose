@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">PlayVideo</string>
+    <string name="app_name">Media3 Video Player</string>
     <string name="home_option_play_video_title">Play Video</string>
     <string name="home_option_play_video_subtitle">Stream or play local video files</string>
     <string name="home_option_trim_video_title">Trim Video</string>
@@ -8,4 +8,29 @@
     <string name="home_option_compress_video_subtitle">Reduce file size while keeping quality</string>
     <string name="home_subtitle">Choose an action to get started</string>
     <string name="home_card_scale_label">cardScale</string>
+    <string name="start_to_trim_your_video">Start to trim your video</string>
+    <string name="tap_to_play">Tap to play</string>
+    <string name="preview">Preview (tap video to play/pause):</string>
+    <string name="or_choose_1_in_5_built_in_videos">Or choose from all built-in videos:</string>
+    <string name="import_local_video">Import local video</string>
+    <string name="choose_video_for_trim">Choose video for trim</string>
+    <string name="choose_compress_video">Choose compress video</string>
+    <string name="back">Back</string>
+    <string name="all_built_in_videos_from_videos">All built-in videos from videos.kt are still working.</string>
+    <string name="please_select_a_video_first">Please select a video first</string>
+    <string name="trim_video">Trim Video</string>
+    <string name="playback_error">Playback Error</string>
+    <string name="something_went_wrong">Something went wrong</string>
+    <string name="very_fast_but_no_compression">Very fast but no compression</string>
+    <string name="very_fast_but_no_compression_description">Trims by cutting at the nearest keyframe. Very fast, original quality.</string>"
+    <string name="slow_but_compress_well">Slow but compresses well</string>
+    <string name="slow_but_compress_well_description">Re-encodes and compresses the video. Slower but smaller file size.</string>"
+    <string name="trim">Trim</string>
+    <string name="close">Close</string>
+    <string name="warning_description">Please select an option. Tap option 1 for technical details.</string>
+    <string name="video_info">Video Information</string>
+    <string name="max_allowed_time">Max allowed time</string>
+    <string name="video_duration">Video duration</string>
+    <string name="file_name">File name</string>
+    <string name="unknown">Unknown</string>
 </resources>
