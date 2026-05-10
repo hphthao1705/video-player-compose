@@ -203,24 +203,31 @@ object AppVideoUtil {
     }
 
     @OptIn(UnstableApi::class)
-    fun compressVideo(
+    suspend fun compressVideo(
         context: Context,
         inputUri: Uri,
-        outputFile: File
-    ) {
+        outputFile: File,
+    ): Result<Uri> = suspendCancellableCoroutine { continuation ->
         val retriever = MediaMetadataRetriever()
         try {
-            // delete after check
-            val originalSize = File(inputUri.path ?: "").length().takeIf { it > 0 }
-                ?: context.contentResolver.openAssetFileDescriptor(inputUri, "r")?.length ?: 0L
-            val originalBitrate = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toLong() ?: 0L
+            retriever.setDataSource(context, inputUri)
+            val originalWidth = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toInt() ?: 0
+            val originalHeight = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toInt() ?: 0
+            val originalFPS = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)?.toFloat() ?: 30f
+            val originalBitrateKbps = (retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toLong() ?: 0L) / 1000
+            val originalSizeMb = (File(inputUri.path ?: "").length().takeIf { it > 0 }
+                ?: context.contentResolver.openAssetFileDescriptor(inputUri, "r")?.use { it.length } ?: 0L).toDouble() / 1024 / 1024
+            val targetBitrate = getBitrate(originalWidth, originalHeight, originalFPS)
 
-            val currentWidth = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toInt() ?: 0
-            val currentHeight = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toInt() ?: 0
-            val currentFPS = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)?.toFloat() ?: 30f
-
-            val targetBitrate = getBitrate(currentWidth, currentHeight, currentFPS)
-            val outputFilePath = outputFile.absolutePath
+            """
+            ======= COMPRESS VIDEO - BEFORE =======
+            Resolution : ${originalWidth}x${originalHeight}
+            FPS        : $originalFPS
+            Bitrate    : ${originalBitrateKbps} Kbps
+            Size       : ${"%.2f".format(originalSizeMb)} MB
+            Target bitrate: ${targetBitrate / 1000} Kbps
+            =======================================
+            """.trimIndent().debugLog()
 
             val videoEncoderSettings = VideoEncoderSettings.Builder()
                 .setBitrate(targetBitrate)
@@ -236,40 +243,48 @@ object AppVideoUtil {
                 .setEncoderFactory(encoderFactory)
                 .build()
 
-            transformer.addListener(object : Transformer.Listener {
+            val listener = object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    val compressedSize = outputFile.length()
-                    val reductionPercent = ((originalSize - compressedSize).toDouble() / originalSize * 100).toInt()
+                    val compressedSizeMb = outputFile.length().toDouble() / 1024 / 1024
+                    val compressedBitrateKbps = exportResult.averageAudioBitrate.takeIf { it > 0 }
+                        ?.let { exportResult.averageVideoBitrate / 1000 } ?: (targetBitrate / 1000)
+                    val reductionPct = if (originalSizeMb > 0)
+                        ((originalSizeMb - compressedSizeMb) / originalSizeMb * 100).toInt() else 0
 
-                    // Xuất Log so sánh
-                    val logOutput = """
-                    
-                    ========= KẾT QUẢ NÉN VIDEO =========
-                    📌 THÔNG SỐ GỐC:
-                    - Độ phân giải: ${currentWidth}x${currentHeight}
-                    - Bitrate: ${originalBitrate / 1000} Kbps
-                    - Dung lượng: ${originalSize / 1024 / 1024} MB
-                    
-                    🚀 THÔNG SỐ SAU NÉN:
-                    - Target Bitrate set: ${targetBitrate / 1000} Kbps
-                    - Dung lượng mới: ${compressedSize / 1024 / 1024} MB
-                    
-                    📉 HIỆU QUẢ: Giảm $reductionPercent% dung lượng!
-                    =====================================
-                """.trimIndent()
+                    """
+                    ======= COMPRESS VIDEO - AFTER ========
+                    Size       : ${"%.2f".format(compressedSizeMb)} MB  (was ${"%.2f".format(originalSizeMb)} MB)
+                    Bitrate    : ${compressedBitrateKbps} Kbps  (was ${originalBitrateKbps} Kbps)
+                    Reduction  : ${reductionPct}%
+                    Output     : ${outputFile.absolutePath}
+                    =======================================
+                    """.trimIndent().debugLog()
 
-                    logOutput.debugLog() // Dùng hàm debugLog của bạn
+                    if (continuation.isActive) {
+                        continuation.resume(Result.success(Uri.fromFile(outputFile)))
+                    }
                 }
 
                 override fun onError(composition: Composition, exportResult: ExportResult, e: ExportException) {
-                    "Lỗi khi nén: ${e.message}".debugLog()
+                    e.printDebugStackTrace()
+                    if (continuation.isActive) {
+                        continuation.resume(Result.failure(e))
+                    }
                 }
-            })
+            }
+            transformer.addListener(listener)
 
-            val mediaItem = MediaItem.fromUri(inputUri)
-            transformer.start(mediaItem, outputFilePath)
+            continuation.invokeOnCancellation {
+                transformer.removeListener(listener)
+                transformer.cancel()
+            }
+
+            transformer.start(MediaItem.fromUri(inputUri), outputFile.absolutePath)
         } catch (e: Exception) {
             e.printDebugStackTrace()
+            if (continuation.isActive) {
+                continuation.resume(Result.failure(e))
+            }
         } finally {
             retriever.release()
         }

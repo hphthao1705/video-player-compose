@@ -60,6 +60,38 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
         }
     }
 
+    fun compressVideo(
+        context: Context,
+        inputUri: Uri,
+    ) {
+        viewModelScope.launch {
+            _trimResultState.update { TrimResultUiState.Loading }
+            val outputFile = try {
+                withContext(Dispatchers.IO) {
+                    File(getDefaultOutputFolder(context = context), "video_compressed_${System.currentTimeMillis()}.mp4")
+                }
+            } catch (e: Exception) {
+                "error when create file: ${e.message}".debugLog()
+                _trimResultState.update { TrimResultUiState.Error(e.message ?: "Failed to create output file") }
+                return@launch
+            }
+            val result = AppVideoUtil.compressVideo(
+                context = context,
+                inputUri = inputUri,
+                outputFile = outputFile,
+            )
+            result
+                .onSuccess { uri ->
+                    "compressed Uri: $uri".debugLog()
+                    _trimResultState.update { TrimResultUiState.Success(uri) }
+                }
+                .onFailure { e ->
+                    "error compress: ${e.message}".debugLog()
+                    _trimResultState.update { TrimResultUiState.Error(e.message ?: "Failed to compress video") }
+                }
+        }
+    }
+
     fun trimVideo(
         context: Context,
         startMs: Long,
