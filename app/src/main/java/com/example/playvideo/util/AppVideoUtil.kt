@@ -239,6 +239,8 @@ object AppVideoUtil {
     suspend fun compressVideo(
         context: Context,
         inputUri: Uri,
+        startMs: Long,
+        endMs: Long,
         outputFile: File,
         onProgress: (Float) -> Unit = {},
     ): Result<Uri> {
@@ -320,7 +322,17 @@ object AppVideoUtil {
                 }
 
                 try {
-                    transformer.start(MediaItem.fromUri(inputUri), outputFile.absolutePath)
+                    val clippingConfiguration = MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(startMs)
+                        .setEndPositionMs(endMs)
+                        .build()
+
+                    val mediaItem: MediaItem = MediaItem.Builder()
+                        .setUri(inputUri)
+                        .setClippingConfiguration(clippingConfiguration)
+                        .build()
+
+                    transformer.start(mediaItem, outputFile.absolutePath)
 
                     // Poll Transformer.getProgress() on the main thread every 200 ms.
                     val holder = ProgressHolder()

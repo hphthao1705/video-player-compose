@@ -162,12 +162,23 @@ fun TrimVideoScreen(
     val performTrim: (TrimVideoOption) -> Unit = { option ->
         when (option) {
             TrimVideoOption.TrimExactly -> viewModel.trimVideo(
-                context, uiModel.startSeekTime, uiModel.endSeekTime, videoUri,
+                context = context,
+                startMs = uiModel.startSeekTime,
+                endMs = uiModel.endSeekTime,
+                inputUri = videoUri,
             )
             is TrimVideoOption.TrimInexactly -> viewModel.trimVideo(
-                context, option.nearestBeforeKeyFrame, option.nearestAfterKeyFrame, videoUri,
+                context = context,
+                startMs = option.nearestBeforeKeyFrame,
+                endMs = option.nearestAfterKeyFrame,
+                inputUri = videoUri,
             )
-            TrimVideoOption.TrimAndCompress -> viewModel.compressVideo(context, videoUri)
+            TrimVideoOption.TrimAndCompress -> viewModel.compressVideo(
+                context = context,
+                startMs = uiModel.startSeekTime,
+                endMs = uiModel.endSeekTime,
+                inputUri = videoUri
+            )
         }
     }
 

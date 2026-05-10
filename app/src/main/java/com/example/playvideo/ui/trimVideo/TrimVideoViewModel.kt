@@ -62,6 +62,8 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
 
     fun compressVideo(
         context: Context,
+        startMs: Long,
+        endMs: Long,
         inputUri: Uri,
     ) {
         viewModelScope.launch {
@@ -78,6 +80,8 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
             val result = AppVideoUtil.compressVideo(
                 context = context,
                 inputUri = inputUri,
+                startMs = startMs,
+                endMs = endMs,
                 outputFile = outputFile,
                 onProgress = { progress ->
                     _trimResultState.update { TrimResultUiState.Loading(progress) }
