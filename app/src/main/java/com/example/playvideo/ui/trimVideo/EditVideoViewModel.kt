@@ -5,9 +5,8 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.playvideo.ui.trimVideo.uiModel.LocalVideoUiModel
 import com.example.playvideo.ui.trimVideo.uiState.TrimResultUiState
-import com.example.playvideo.ui.trimVideo.uiState.VideoNameUiState
+import com.example.playvideo.ui.trimVideo.uiState.DialogState
 import com.example.playvideo.util.AppVideoUtil
 import com.example.playvideo.util.AppVideoUtil.extractVideoFrames
 import com.example.playvideo.util.AppVideoUtil.getDefaultOutputFolder
@@ -23,15 +22,19 @@ import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
-class TrimVideoViewModel @Inject constructor(): ViewModel() {
-    private val _videoNameState = MutableStateFlow<VideoNameUiState>(VideoNameUiState.StandBy)
-    val videoNameState = _videoNameState.asStateFlow()
-
+class EditVideoViewModel @Inject constructor(): ViewModel() {
     private val _trimResultState = MutableStateFlow<TrimResultUiState>(TrimResultUiState.StandBy)
     val trimResultState = _trimResultState.asStateFlow()
 
+    private val _dialogState = MutableStateFlow<DialogState>(DialogState.StandBy)
+    val dialogState = _dialogState.asStateFlow()
+
     fun resetTrimResult() {
         _trimResultState.update { TrimResultUiState.StandBy }
+    }
+
+    fun updateDialogState(state: DialogState) {
+        _dialogState.update { state }
     }
 
     suspend fun getFrameBitmaps(
@@ -40,24 +43,6 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
         frameCount: Int = 8,
     ): List<Bitmap> = withContext(Dispatchers.IO) {
         extractVideoFrames(context, uri, frameCount)
-    }
-
-    fun getVideoInfo(context: Context, uri: Uri?) {
-        viewModelScope.launch(Dispatchers.IO) {
-            if (uri == null) {
-                _videoNameState.update { VideoNameUiState.Error }
-                return@launch
-            }
-
-            _videoNameState.update { VideoNameUiState.Loading }
-
-            val videoName: String = AppVideoUtil.getVideoName(context, uri)
-            val videoDuration: Long = AppVideoUtil.getVideoDuration(context, uri)
-            _videoNameState.update { VideoNameUiState.Success(LocalVideoUiModel(
-                name = videoName,
-                duration = videoDuration
-            )) }
-        }
     }
 
     fun compressVideo(

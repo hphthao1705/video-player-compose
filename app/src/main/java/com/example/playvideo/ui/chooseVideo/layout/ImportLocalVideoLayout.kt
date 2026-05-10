@@ -12,23 +12,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.playvideo.R
-import com.example.playvideo.VideoPreviewViewModel
+import com.example.playvideo.VideoViewModel
 
 @Composable
 fun ImportLocalVideoSection() {
-    val viewModel: VideoPreviewViewModel = hiltViewModel()
+    val viewModel: VideoViewModel = hiltViewModel()
     val pickVideoLauncher: ManagedActivityResultLauncher<String, Uri?> = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->
         uri ?: return@rememberLauncherForActivityResult
         viewModel.previewLocalVideo(uri)
     }
+    val onLaunchVideo = remember { { pickVideoLauncher.launch("video/*") } }
 
     Text(
         text = stringResource(R.string.all_built_in_videos_from_videos),
@@ -39,7 +41,7 @@ fun ImportLocalVideoSection() {
     Spacer(Modifier.height(12.dp))
 
     ImportLocalVideoSection(
-        onImportLocalVideo = { pickVideoLauncher.launch("video/*") },
+        onImportLocalVideo = onLaunchVideo
     )
 }
 

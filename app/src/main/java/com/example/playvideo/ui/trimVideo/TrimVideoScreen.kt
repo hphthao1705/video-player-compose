@@ -15,9 +15,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
@@ -32,74 +30,68 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.playvideo.R
+import com.example.playvideo.VideoOption
+import com.example.playvideo.VideoViewModel
 import com.example.playvideo.ui.trimVideo.layout.TrimDialog
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoPlayer
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoSeekBar
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoTopBar
-import com.example.playvideo.ui.trimVideo.uiModel.TrimVideoUiModel
 import com.example.playvideo.ui.trimVideo.uiState.TrimResultUiState
-import com.example.playvideo.ui.trimVideo.uiState.TrimVideoDialogState
-import com.example.playvideo.ui.trimVideo.uiState.TrimVideoMode
+import com.example.playvideo.ui.trimVideo.uiState.DialogState
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
 import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
-import com.example.playvideo.util.VideoHelper.debugLog
+import com.example.playvideo.util.MathHelper.orZero
 
 private val TrimColorBackground = Color(0xFF0D0D0D)
 
 @Composable
 fun TrimVideoScreen(
-    videoUri: Uri,
-    mode: TrimVideoMode = TrimVideoMode.Compress,
+    mode: VideoOption = VideoOption.Compress,
     onBack: () -> Unit,
     onTrimSuccess: (Uri) -> Unit = {},
 ) {
-    val viewModel: TrimVideoViewModel = viewModel()
+    val viewModel: EditVideoViewModel = viewModel()
+    val videoViewModel: VideoViewModel = viewModel()
     val context = LocalContext.current
     val playbackError = stringResource(R.string.playback_error)
     val trimErrorTitle = stringResource(R.string.trim_video)
     val trimResultState by viewModel.trimResultState.collectAsState()
+    val dialogState = viewModel.dialogState.collectAsState().value
 
-    var uiModel by remember {
-        mutableStateOf(
-            TrimVideoUiModel(
-//                title = title,
-                videoUri = videoUri,
-//                maxAllowedTrimTime = MAX_ALLOWED_TRIM_TIME,
-                endSeekTime = MAX_ALLOWED_TRIM_TIME,
-            )
-        )
-    }
-    var dialogState by remember { mutableStateOf<TrimVideoDialogState>(TrimVideoDialogState.StandBy) }
+    val selectedVideo = videoViewModel.selectedVideo.collectAsState().value
+
     val player = remember(context) {
         ExoPlayer.Builder(context).build().apply { playWhenReady = true }
     }
 
-    LaunchedEffect(videoUri) {
-        // prepare for player first (faster)
-        player.setMediaItem(MediaItem.fromUri(videoUri))
-        player.prepare()
-
-        // get bitmaps
-        val bitmaps = viewModel.getFrameBitmaps(context, videoUri)
-        uiModel = uiModel.copy(frameBitmaps = bitmaps)
+    LaunchedEffect(selectedVideo) {
+        selectedVideo?.uri?.let { uri ->
+            // prepare for player first (faster)
+            player.setMediaItem(MediaItem.fromUri(uri))
+            player.prepare()
+        }
     }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY && player.duration > 0) {
-                    uiModel = uiModel.copy(
-                        isReadyToTrim = true,
-                        videoDurationInMilSecond = player.duration,
-                        endSeekTime = minOf(MAX_ALLOWED_TRIM_TIME, player.duration),
-                    )
+                    videoViewModel.updateSelectedVideo { currentVideo ->
+                        currentVideo.copy(
+                            isReadyToTrim = true,
+                            duration = player.duration,
+                            endTrimMs = minOf(MAX_ALLOWED_TRIM_TIME, player.duration),
+                        )
+                    }
                 }
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                dialogState = TrimVideoDialogState.Error(
-                    title = playbackError,
-                    message = error.message ?: "An unknown error occurred.",
+                viewModel.updateDialogState(
+                    DialogState.Error(
+                        title = playbackError,
+                        message = error.message ?: "An unknown error occurred.",
+                    )
                 )
             }
         }
@@ -110,48 +102,44 @@ fun TrimVideoScreen(
         }
     }
 
-    // Capture the list at composition time so onDispose recycles the exact bitmaps
-    // that were live when this effect started, not whatever is in uiModel at dispose time.
-    val bitmapsSnapshot = uiModel.frameBitmaps
-    DisposableEffect(bitmapsSnapshot) {
-        onDispose {
-            "DisposableEffect bitmaps".debugLog()
-            bitmapsSnapshot.forEach { if (!it.isRecycled) it.recycle() }
-        }
-    }
-
-    // Debounce seeks so ExoPlayer isn't called on every drag pixel (~60/sec).
+    // debounce seeks so ExoPlayer isn't called on every drag pixel (~60/sec).
     LaunchedEffect(Unit) {
-        snapshotFlow { uiModel.seekTo }
+        snapshotFlow { selectedVideo?.seekTo.orZero() }
             .filter { it >= 0L }
             .debounce(80L)
             .collect { seekTo ->
                 player.seekTo(seekTo)
-                uiModel = uiModel.copy(seekTo = -1L)
+                videoViewModel.updateSelectedVideo { currentVideo ->
+                    currentVideo.copy(seekTo = -1L)
+                }
             }
     }
 
-    LaunchedEffect(uiModel.isStopPlayVideo) {
-        if (uiModel.isStopPlayVideo) {
+    LaunchedEffect(selectedVideo?.isStopPlayVideo) {
+        if (selectedVideo?.isStopPlayVideo == true) {
             player.stop()
-            uiModel = uiModel.copy(isStopPlayVideo = false)
+            videoViewModel.updateSelectedVideo { currentVideo ->
+                currentVideo.copy(isStopPlayVideo = false)
+            }
         }
     }
 
     LaunchedEffect(trimResultState) {
         when (val state = trimResultState) {
             is TrimResultUiState.Loading -> {
-                dialogState = TrimVideoDialogState.Loading(state.progress)
+                viewModel.updateDialogState(DialogState.Loading(state.progress))
             }
             is TrimResultUiState.Success -> {
-                dialogState = TrimVideoDialogState.StandBy
+                viewModel.updateDialogState(DialogState.StandBy)
                 viewModel.resetTrimResult()
                 onTrimSuccess(state.uri)
             }
             is TrimResultUiState.Error -> {
-                dialogState = TrimVideoDialogState.Error(
-                    title = trimErrorTitle,
-                    message = state.message,
+                viewModel.updateDialogState(
+                    DialogState.Error(
+                        title = trimErrorTitle,
+                        message = state.message,
+                    )
                 )
                 viewModel.resetTrimResult()
             }
@@ -163,21 +151,21 @@ fun TrimVideoScreen(
         when (option) {
             TrimVideoOption.TrimExactly -> viewModel.trimVideo(
                 context = context,
-                startMs = uiModel.startSeekTime,
-                endMs = uiModel.endSeekTime,
-                inputUri = videoUri,
+                startMs = selectedVideo?.startTrimMs.orZero(),
+                endMs = selectedVideo?.endTrimMs.orZero(),
+                inputUri = selectedVideo?.uri!!,
             )
             is TrimVideoOption.TrimInexactly -> viewModel.trimVideo(
                 context = context,
                 startMs = option.nearestBeforeKeyFrame,
                 endMs = option.nearestAfterKeyFrame,
-                inputUri = videoUri,
+                inputUri = selectedVideo?.uri!!,
             )
             TrimVideoOption.TrimAndCompress -> viewModel.compressVideo(
                 context = context,
-                startMs = uiModel.startSeekTime,
-                endMs = uiModel.endSeekTime,
-                inputUri = videoUri
+                startMs = selectedVideo?.startTrimMs.orZero(),
+                endMs = selectedVideo?.endTrimMs.orZero(),
+                inputUri = selectedVideo?.uri!!
             )
         }
     }
@@ -194,21 +182,26 @@ fun TrimVideoScreen(
                     .background(TrimColorBackground),
             ) {
                 TrimVideoTopBar(
-//                    title = uiModel.title,
-                    isReadyToTrim = uiModel.isReadyToTrim,
+                    isReadyToTrim = selectedVideo?.isReadyToTrim == true,
                     onBackClick = onBack,
-                    onInfoClick = { dialogState = TrimVideoDialogState.Information },
+                    onInfoClick = { viewModel.updateDialogState(DialogState.Information) },
                     onTrimClick = {
                         when (mode) {
-                            TrimVideoMode.Trim -> {
-//                                performTrim(TrimVideoOption.TrimExactly)
-                                if (uiModel.videoUri == null) return@TrimVideoTopBar
+                            VideoOption.Trim -> {
+                                if (selectedVideo?.uri == null) return@TrimVideoTopBar
                                 else {
-                                    viewModel.trimVideo(context, uiModel.startSeekTime, uiModel.endSeekTime, uiModel.videoUri!! )
+                                    viewModel.trimVideo(
+                                        context = context,
+                                        startMs = selectedVideo.startTrimMs.orZero(),
+                                        endMs = selectedVideo.endTrimMs.orZero(),
+                                        inputUri = selectedVideo.uri
+                                    )
                                 }
                             }
-                            TrimVideoMode.Compress ->
-                                dialogState = TrimVideoDialogState.AskSelectOptionToTrimVideo
+                            VideoOption.Compress ->
+                                viewModel.updateDialogState(DialogState.AskSelectOptionTo)
+
+                           else -> Unit
                         }
                     },
                 )
@@ -220,31 +213,34 @@ fun TrimVideoScreen(
                         .fillMaxWidth()
                         .weight(1f),
                     player = player,
-                    isReady = uiModel.isReadyToTrim,
+                    isReady = selectedVideo?.isReadyToTrim == true,
                 )
 
                 TrimVideoSeekBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 24.dp, bottom = 32.dp),
-                    frameBitmaps = uiModel.frameBitmaps,
-                    startSeekTime = uiModel.startSeekTime,
-                    endSeekTime = uiModel.endSeekTime,
-                    videoDuration = uiModel.videoDurationInMilSecond,
-//                    maxTrimTime = uiModel.maxAllowedTrimTime,
+                    frameBitmaps = selectedVideo?.previewBitmaps ?: emptyList(),
+                    startSeekTime = selectedVideo?.startTrimMs.orZero(),
+                    endSeekTime = selectedVideo?.endTrimMs.orZero(),
+                    videoDuration = selectedVideo?.duration.orZero(),
                     onStartTimeChange = { newStart ->
-                        uiModel = uiModel.copy(startSeekTime = newStart, seekTo = newStart)
+                        videoViewModel.updateSelectedVideo { currentVideo ->
+                            currentVideo.copy(startTrimMs = newStart, seekTo = newStart)
+                        }
                     },
                     onEndTimeChange = { newEnd ->
-                        uiModel = uiModel.copy(endSeekTime = newEnd, seekTo = newEnd)
+                        videoViewModel.updateSelectedVideo { currentVideo ->
+                            currentVideo.copy(endTrimMs = newEnd, seekTo = newEnd)
+                        }
                     },
                 )
             }
 
             TrimDialog(
                 state = dialogState,
-                videoUri = uiModel.videoUri,
-                onDismiss = { dialogState = TrimVideoDialogState.StandBy },
+                selectedVideoData = selectedVideo,
+                onDismiss = { viewModel.updateDialogState(DialogState.StandBy) },
                 onTrimConfirm = performTrim,
             )
         }
