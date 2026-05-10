@@ -18,11 +18,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.playvideo.R
-import com.example.playvideo.VideoPreviewViewModel
+import com.example.playvideo.VideoViewModel
 
 @Composable
 fun ImportLocalVideoSection() {
-    val viewModel: VideoPreviewViewModel = hiltViewModel()
+    val viewModel: VideoViewModel = hiltViewModel()
     val pickVideoLauncher: ManagedActivityResultLauncher<String, Uri?> = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri: Uri? ->

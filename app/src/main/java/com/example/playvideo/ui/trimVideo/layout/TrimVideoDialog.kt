@@ -1,6 +1,5 @@
 package com.example.playvideo.ui.trimVideo.layout
 
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -37,7 +36,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,7 +45,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,12 +53,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.playvideo.R
-import com.example.playvideo.ui.trimVideo.TrimVideoViewModel
+import com.example.playvideo.data.VideoInfoData
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoDialogState
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
-import com.example.playvideo.ui.trimVideo.uiState.VideoNameUiState
 import com.example.playvideo.util.AppDimension.DIMENSION_4
 import com.example.playvideo.util.MathHelper.orZero
 import com.example.playvideo.util.MathHelper.toTimestamp
@@ -76,7 +71,7 @@ private val TrimColorText = Color.White
 @Composable
 fun TrimDialog(
     state: TrimVideoDialogState,
-    videoUri: Uri?,
+    selectedVideoData: VideoInfoData?,
     onDismiss: () -> Unit,
     onTrimConfirm: (TrimVideoOption) -> Unit,
 ) {
@@ -102,7 +97,7 @@ fun TrimDialog(
         TrimVideoDialogState.Information -> {
             DialogWrapper(onDismissRequest = onDismiss) {
                 VideoInformationDialog(
-                    videoUri = videoUri,
+                    selectedVideoData = selectedVideoData,
                     onClose = onDismiss,
                 )
             }
@@ -234,17 +229,9 @@ private fun ErrorDialog(
 
 @Composable
 private fun VideoInformationDialog(
-    videoUri: Uri?,
+    selectedVideoData: VideoInfoData?,
     onClose: () -> Unit,
 ) {
-    val appContext = LocalContext.current.applicationContext
-    val viewModel: TrimVideoViewModel = viewModel()
-    val uiState = viewModel.videoNameState.collectAsState().value
-
-    LaunchedEffect(Unit) {
-        viewModel.getVideoInfo(context = appContext, uri = videoUri)
-    }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -259,23 +246,8 @@ private fun VideoInformationDialog(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(16.dp))
-        when (uiState) {
-            is VideoNameUiState.Loading -> {
-                VideoInfoLoading()
-            }
-
-            is VideoNameUiState.Success -> {
-                InfoRow(label = stringResource(R.string.file_name), value = uiState.video.name.orEmpty())
-                InfoRow(label = stringResource(R.string.video_duration), value = uiState.video.duration.orZero().toTimestamp())
-            }
-
-            is VideoNameUiState.Error -> {
-                InfoRow(label = stringResource(R.string.file_name), value = stringResource(R.string.unknown))
-                InfoRow(label = stringResource(R.string.video_duration), value = "00:00")
-            }
-
-            else -> Unit
-        }
+        InfoRow(label = stringResource(R.string.file_name), value = selectedVideoData?.name.orEmpty())
+        InfoRow(label = stringResource(R.string.video_duration), value = selectedVideoData?.duration.orZero().toTimestamp())
         Spacer(Modifier.height(16.dp))
         Box(modifier = Modifier.fillMaxWidth()) {
             DialogButton(text = stringResource(R.string.close), onClick = onClose)

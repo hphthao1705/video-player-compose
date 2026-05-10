@@ -18,6 +18,7 @@ import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.TransformationRequest
+import com.example.playvideo.data.VideoMetadata
 import com.example.playvideo.util.MathHelper.toLongOrZero
 import com.example.playvideo.util.VideoHelper.debugLog
 import com.example.playvideo.util.VideoHelper.printDebugStackTrace
@@ -209,15 +210,7 @@ object AppVideoUtil {
         }
     }
 
-    private data class VideoMetadata(
-        val width: Int,
-        val height: Int,
-        val fps: Float,
-        val bitrateKbps: Long,
-        val sizeMb: Double,
-    )
-
-    private suspend fun readVideoMetadata(context: Context, inputUri: Uri): VideoMetadata =
+    suspend fun getVideoMetaData(context: Context, inputUri: Uri): VideoMetadata =
         withContext(Dispatchers.IO) {
             val retriever = MediaMetadataRetriever()
             try {
@@ -245,7 +238,7 @@ object AppVideoUtil {
         onProgress: (Float) -> Unit = {},
     ): Result<Uri> {
         val meta = try {
-            readVideoMetadata(context, inputUri)
+            getVideoMetaData(context, inputUri)
         } catch (e: Exception) {
             e.printDebugStackTrace()
             return Result.failure(e)

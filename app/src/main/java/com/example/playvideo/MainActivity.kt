@@ -21,20 +21,19 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
-    private val videoPreviewViewModel: VideoPreviewViewModel by viewModels()
+    private val videoViewModel: VideoViewModel by viewModels()
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
-        videoPreviewViewModel.preloadBuiltInPreviews()
+        videoViewModel.preloadBuiltInPreviews()
 
         setContent {
             val currentScreen = viewModel.currentScreen.collectAsState().value
             val videoOption = viewModel.option.collectAsState().value
-            var trimVideoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+            val selectedVideo = videoViewModel.selectedVideo.collectAsState().value
             var trimmedVideoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
             when (currentScreen) {
@@ -61,17 +60,21 @@ class MainActivity : ComponentActivity() {
                             viewModel.updateScreen(AppScreen.HOME)
                         },
                         onStartTrim = { selectedUri ->
-                            trimVideoUri = selectedUri
+//                            trimVideoUri = selectedUri
+                            videoViewModel.changeSelectedVideo(
+                                context = applicationContext,
+                                uri = selectedUri
+                            )
                             viewModel.updateScreen(AppScreen.TRIM_VIDEO)
                         },
                     )
                 }
 
                 AppScreen.TRIM_VIDEO -> {
-                    val uri = trimVideoUri
+                    val uri = selectedVideo?.uri
                     if (uri != null) {
                         TrimVideoScreen(
-                            videoUri = uri,
+//                            selectedVideoData = selectedVideo,
                             mode = videoOption,
                             onBack = {
                                 viewModel.updateScreen(AppScreen.CHOOSE_TRIM_VIDEO)

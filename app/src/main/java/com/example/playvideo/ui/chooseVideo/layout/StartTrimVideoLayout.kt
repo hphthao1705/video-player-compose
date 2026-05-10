@@ -13,24 +13,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import com.example.playvideo.R
-import com.example.playvideo.data.AvailableVideoInfoData
+import com.example.playvideo.data.VideoInfoData
 import com.example.playvideo.util.VideoHelper.printDebugStackTrace
 
 @Composable
 fun StartTrimVideoSection(
-    selected: AvailableVideoInfoData?,
+    selectedVideo: VideoInfoData?,
     onStartTrim: (Uri) -> Unit,
     onNoVideoSelected: () -> Unit,
 ) {
     Button(
         onClick = {
-            if (selected == null) {
+            if (selectedVideo == null) {
                 onNoVideoSelected()
             } else {
                 try {
-                    onStartTrim(selected.url.orEmpty().toUri())
+                    selectedVideo.uri?.let { uri ->
+                        onStartTrim(uri)
+                    }
                 } catch (e: Exception) {
                     e.printDebugStackTrace()
                 }

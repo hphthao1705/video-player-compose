@@ -22,14 +22,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.playvideo.R
-import com.example.playvideo.VideoPreviewViewModel
+import com.example.playvideo.VideoViewModel
 import com.example.playvideo.data.AvailableVideoInfoData
 import com.example.playvideo.data.videos
 import com.example.playvideo.ui.chooseVideo.layout.AvailableVideosLoading
@@ -47,8 +46,8 @@ fun ChooseVideoScreen(
     onBack: () -> Unit,
     onStartTrim: (Uri) -> Unit,
 ) {
-    val viewModel: VideoPreviewViewModel = hiltViewModel()
-    val selectedVideo by viewModel.selectedVideo.collectAsStateWithLifecycle()
+    val viewModel: VideoViewModel = hiltViewModel()
+    val selectedVideo = viewModel.selectedVideo.collectAsStateWithLifecycle().value
 
     val context = LocalContext.current
     val player: ExoPlayer = remember(context) {
@@ -58,10 +57,10 @@ fun ChooseVideoScreen(
         }
     }
 
-    LaunchedEffect(selectedVideo?.url) {
-        val url = selectedVideo?.url ?: return@LaunchedEffect
-        "VideoPlayer: preparing url=$url".debugLog()
-        player.setMediaItem(MediaItem.fromUri(url.toUri()))
+    LaunchedEffect(selectedVideo) {
+        val uri = selectedVideo?.uri ?: return@LaunchedEffect
+        "VideoPlayer: preparing url=$uri".debugLog()
+        player.setMediaItem(MediaItem.fromUri(uri))
         player.prepare()
         player.pause()
         player.seekTo(0L)
@@ -104,24 +103,24 @@ fun ChooseVideoScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            ChooseAvailableVideosSection(
-                selected = selectedVideo,
-                onSelectVideo = viewModel::selectVideo,
-            )
+//            ChooseAvailableVideosSection(
+//                selected = selectedVideo,
+//                onSelectVideo = viewModel::selectVideo,
+//            )
 
             Spacer(Modifier.height(12.dp))
 
-            key(selectedVideo?.url) {
+            key(selectedVideo?.uri) {
                 PreviewSection(
                     player = player,
-                    previewBitmap = selectedVideo?.previewBitmap,
+                    previewBitmap = selectedVideo?.previewBitmaps?.firstOrNull(),
                 )
             }
 
             Spacer(Modifier.weight(1f))
 
             StartTrimVideoSection(
-                selected = selectedVideo,
+                selectedVideo = selectedVideo,
                 onStartTrim = onStartTrim,
                 onNoVideoSelected = {
                     coroutineScope.launch {
@@ -138,7 +137,7 @@ private fun ChooseAvailableVideosSection(
     selected: AvailableVideoInfoData?,
     onSelectVideo: (AvailableVideoInfoData) -> Unit,
 ) {
-    val viewModel: VideoPreviewViewModel = hiltViewModel()
+    val viewModel: VideoViewModel = hiltViewModel()
     val availableVideos by viewModel.availableVideosUiState.collectAsStateWithLifecycle()
 
     when (availableVideos) {
