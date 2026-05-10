@@ -32,8 +32,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.resume
 
-const val FOLDER_TRIM_VIDEO = "videos/trim"
 object AppVideoUtil {
+    const val FOLDER_TRIM_VIDEO = "videos/trim"
     const val MAX_ALLOWED_TRIM_TIME = 30_000L // 30 seconds
 
     fun getDefaultOutputFolder(context: Context) : File {
