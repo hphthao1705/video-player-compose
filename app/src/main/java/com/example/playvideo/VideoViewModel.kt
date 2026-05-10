@@ -129,4 +129,11 @@ class VideoViewModel @Inject constructor(
             }
         }
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        _selectedVideo.value?.previewBitmaps?.forEach { bitmap ->
+            if (!bitmap.isRecycled) bitmap.recycle()
+        }
+    }
 }

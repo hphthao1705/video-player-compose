@@ -109,16 +109,6 @@ fun TrimVideoScreen(
         }
     }
 
-    // Capture the list at composition time so onDispose recycles the exact bitmaps
-    // that were live when this effect started, not whatever is in uiModel at dispose time.
-    val bitmapsSnapshot = selectedVideo?.previewBitmaps
-    DisposableEffect(bitmapsSnapshot) {
-        onDispose {
-            "DisposableEffect bitmaps".debugLog()
-            bitmapsSnapshot?.forEach { if (!it.isRecycled) it.recycle() }
-        }
-    }
-
     // Debounce seeks so ExoPlayer isn't called on every drag pixel (~60/sec).
     LaunchedEffect(Unit) {
         snapshotFlow { selectedVideo?.seekTo.orZero() }
