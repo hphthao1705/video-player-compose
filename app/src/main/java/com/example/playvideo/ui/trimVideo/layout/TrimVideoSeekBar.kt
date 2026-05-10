@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.example.playvideo.util.AppDimension.DIMENSION_24
 import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
 import com.example.playvideo.util.MathHelper.toTimestamp
+import com.example.playvideo.util.shimmerLoading
 
 private val TrimColorBackground = Color(0xFF0D0D0D)
 private val TrimColorDivider = Color(0xFF333333)
@@ -57,7 +58,7 @@ private val TrimColorText = Color.White
 @Composable
 fun TrimVideoSeekBar(
     modifier: Modifier = Modifier,
-    frameBitmaps: List<Bitmap>,
+    frameBitmaps: List<Bitmap>?,        // null = still loading; emptyList = loaded but no frames
     startSeekTime: Long,
     endSeekTime: Long,
     videoDuration: Long,
@@ -68,6 +69,47 @@ fun TrimVideoSeekBar(
     val seekBarHeight = 64.dp
     val labelHeight = 20.dp
 
+    // ── Still loading — show shimmer skeleton ────────────────────────────────
+    if (frameBitmaps == null) {
+        Box(
+            modifier = modifier
+                .padding(horizontal = DIMENSION_24)
+                .height(labelHeight + 4.dp + seekBarHeight + 4.dp + labelHeight),
+        ) {
+            // Top timestamp label shimmer
+            Box(
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(labelHeight)
+                    .align(Alignment.TopStart)
+                    .clip(RoundedCornerShape(4.dp))
+                    .shimmerLoading(),
+            )
+            // Seek bar shimmer
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(seekBarHeight)
+                    .align(Alignment.TopStart)
+                    .offset(y = labelHeight + 4.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .shimmerLoading(),
+            )
+            // Bottom timestamp label shimmer
+            Box(
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(labelHeight)
+                    .align(Alignment.TopEnd)
+                    .offset(y = labelHeight + 4.dp + seekBarHeight + 4.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .shimmerLoading(),
+            )
+        }
+        return
+    }
+
+    // ── Loaded but no frames extracted ───────────────────────────────────────
     if (frameBitmaps.isEmpty()) {
         Box(
             modifier = modifier
@@ -87,6 +129,7 @@ fun TrimVideoSeekBar(
         return
     }
 
+    // ── Normal render ─────────────────────────────────────────────────────────
     val density = LocalDensity.current
     val thumbWidth = 20.dp
     val thumbWidthPx = with(density) { thumbWidth.toPx() }
