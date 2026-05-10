@@ -65,7 +65,7 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
         inputUri: Uri,
     ) {
         viewModelScope.launch {
-            _trimResultState.update { TrimResultUiState.Loading }
+            _trimResultState.update { TrimResultUiState.Loading() }
             val outputFile = try {
                 withContext(Dispatchers.IO) {
                     File(getDefaultOutputFolder(context = context), "video_compressed_${System.currentTimeMillis()}.mp4")
@@ -79,6 +79,9 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
                 context = context,
                 inputUri = inputUri,
                 outputFile = outputFile,
+                onProgress = { progress ->
+                    _trimResultState.update { TrimResultUiState.Loading(progress) }
+                },
             )
             result
                 .onSuccess { uri ->
@@ -99,7 +102,7 @@ class TrimVideoViewModel @Inject constructor(): ViewModel() {
         inputUri: Uri,
     ) {
         viewModelScope.launch {
-            _trimResultState.update { TrimResultUiState.Loading }
+            _trimResultState.update { TrimResultUiState.Loading() }
             val outputFile = try {
                 withContext(Dispatchers.IO) {
                     File(getDefaultOutputFolder(context = context), "video_output_${System.currentTimeMillis()}.mp4")

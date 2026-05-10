@@ -33,6 +33,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -82,9 +83,9 @@ fun TrimDialog(
     when (state) {
         TrimVideoDialogState.StandBy -> Unit
 
-        TrimVideoDialogState.Loading -> {
+        is TrimVideoDialogState.Loading -> {
             DialogWrapper(onDismissRequest = {}) {
-                AppLoadingDialog(message = "Processing video…")
+                AppLoadingDialog(progress = state.progress, message = "Processing video…")
             }
         }
 
@@ -161,16 +162,31 @@ private fun DialogWrapper(
 
 
 @Composable
-private fun AppLoadingDialog(message: String) {
+private fun AppLoadingDialog(progress: Float, message: String) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        CircularProgressIndicator(
-            color = TrimColorPrimary,
-            strokeWidth = 2.dp,
-        )
+        if (progress <= 0f) {
+            CircularProgressIndicator(
+                color = TrimColorPrimary,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth(),
+                color = TrimColorPrimary,
+                trackColor = TrimColorDeselected,
+            )
+            Text(
+                text = "${(progress * 100).toInt()}%",
+                color = TrimColorPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
         Text(
             text = message,
             color = TrimColorText,

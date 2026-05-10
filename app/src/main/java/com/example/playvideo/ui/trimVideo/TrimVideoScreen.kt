@@ -140,8 +140,8 @@ fun TrimVideoScreen(
 
     LaunchedEffect(trimResultState) {
         when (val state = trimResultState) {
-            TrimResultUiState.Loading -> {
-                dialogState = TrimVideoDialogState.Loading
+            is TrimResultUiState.Loading -> {
+                dialogState = TrimVideoDialogState.Loading(state.progress)
             }
             is TrimResultUiState.Success -> {
                 dialogState = TrimVideoDialogState.StandBy

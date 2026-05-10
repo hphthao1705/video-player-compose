@@ -13,6 +13,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.VideoEncoderSettings
+import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
@@ -20,7 +21,11 @@ import androidx.media3.transformer.TransformationRequest
 import com.example.playvideo.util.MathHelper.toLongOrZero
 import com.example.playvideo.util.VideoHelper.debugLog
 import com.example.playvideo.util.VideoHelper.printDebugStackTrace
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -235,6 +240,7 @@ object AppVideoUtil {
         context: Context,
         inputUri: Uri,
         outputFile: File,
+        onProgress: (Float) -> Unit = {},
     ): Result<Uri> {
         val meta = try {
             readVideoMetadata(context, inputUri)
@@ -272,8 +278,11 @@ object AppVideoUtil {
                     .setEncoderFactory(encoderFactory)
                     .build()
 
+                var progressJob: kotlinx.coroutines.Job? = null
+
                 val listener = object : Transformer.Listener {
                     override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                        progressJob?.cancel()
                         val compressedSizeMb = outputFile.length().toDouble() / 1024 / 1024
                         val compressedBitrateKbps = exportResult.averageAudioBitrate.takeIf { it > 0 }
                             ?.let { exportResult.averageVideoBitrate / 1000 } ?: (targetBitrate / 1000)
@@ -295,6 +304,7 @@ object AppVideoUtil {
                     }
 
                     override fun onError(composition: Composition, exportResult: ExportResult, e: ExportException) {
+                        progressJob?.cancel()
                         e.printDebugStackTrace()
                         if (continuation.isActive) {
                             continuation.resume(Result.failure(e))
@@ -304,12 +314,24 @@ object AppVideoUtil {
                 transformer.addListener(listener)
 
                 continuation.invokeOnCancellation {
+                    progressJob?.cancel()
                     transformer.removeListener(listener)
                     transformer.cancel()
                 }
 
                 try {
                     transformer.start(MediaItem.fromUri(inputUri), outputFile.absolutePath)
+
+                    // Poll Transformer.getProgress() on the main thread every 200 ms.
+                    val holder = ProgressHolder()
+                    progressJob = CoroutineScope(Dispatchers.Main + SupervisorJob()).launch {
+                        while (true) {
+                            delay(200)
+                            if (transformer.getProgress(holder) == Transformer.PROGRESS_STATE_AVAILABLE) {
+                                onProgress(holder.progress / 100f)
+                            }
+                        }
+                    }
                 } catch (e: Exception) {
                     e.printDebugStackTrace()
                     if (continuation.isActive) {
