@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import com.example.playvideo.ui.HomeScreen
 import com.example.playvideo.ui.chooseVideo.ChooseVideoScreen
 import com.example.playvideo.ui.trimVideo.TrimVideoScreen
+import com.example.playvideo.ui.trimmedVideo.TrimmedVideoScreen
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoMode
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             var currentScreen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
             var trimVideoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+            var trimmedVideoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
             var trimVideoMode by rememberSaveable { mutableStateOf(TrimVideoMode.Trim) }
 
             when (currentScreen) {
@@ -70,9 +72,25 @@ class MainActivity : ComponentActivity() {
                             videoUri = uri,
                             mode = trimVideoMode,
                             onBack = { currentScreen = AppScreen.CHOOSE_TRIM_VIDEO },
+                            onTrimSuccess = { resultUri ->
+                                trimmedVideoUri = resultUri
+                                currentScreen = AppScreen.PLAY_TRIMMED_VIDEO
+                            },
                         )
                     } else {
                         currentScreen = AppScreen.CHOOSE_TRIM_VIDEO
+                    }
+                }
+
+                AppScreen.PLAY_TRIMMED_VIDEO -> {
+                    val uri = trimmedVideoUri
+                    if (uri != null) {
+                        TrimmedVideoScreen(
+                            videoUri = uri,
+                            onBack = { currentScreen = AppScreen.TRIM_VIDEO },
+                        )
+                    } else {
+                        currentScreen = AppScreen.TRIM_VIDEO
                     }
                 }
             }
@@ -84,4 +102,5 @@ enum class AppScreen {
     HOME,
     CHOOSE_TRIM_VIDEO,
     TRIM_VIDEO,
+    PLAY_TRIMMED_VIDEO,
 }

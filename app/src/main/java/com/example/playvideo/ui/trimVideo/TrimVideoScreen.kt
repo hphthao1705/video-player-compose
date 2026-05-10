@@ -13,6 +13,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,7 @@ import com.example.playvideo.ui.trimVideo.layout.TrimVideoPlayer
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoSeekBar
 import com.example.playvideo.ui.trimVideo.layout.TrimVideoTopBar
 import com.example.playvideo.ui.trimVideo.uiModel.TrimVideoUiModel
+import com.example.playvideo.ui.trimVideo.uiState.TrimResultUiState
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoDialogState
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoMode
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
@@ -51,11 +53,14 @@ fun TrimVideoScreen(
     videoUri: Uri,
     mode: TrimVideoMode = TrimVideoMode.Compress,
     onBack: () -> Unit,
+    onTrimSuccess: (Uri) -> Unit = {},
 ) {
     val viewModel: TrimVideoViewModel = viewModel()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val playbackError = stringResource(R.string.playback_error)
+    val trimErrorTitle = stringResource(R.string.trim_video)
+    val trimResultState by viewModel.trimResultState.collectAsState()
 
     var uiModel by remember {
         mutableStateOf(
@@ -133,6 +138,27 @@ fun TrimVideoScreen(
         if (uiModel.isStopPlayVideo) {
             player.stop()
             uiModel = uiModel.copy(isStopPlayVideo = false)
+        }
+    }
+
+    LaunchedEffect(trimResultState) {
+        when (val state = trimResultState) {
+            TrimResultUiState.Loading -> {
+                dialogState = TrimVideoDialogState.Loading
+            }
+            is TrimResultUiState.Success -> {
+                dialogState = TrimVideoDialogState.StandBy
+                viewModel.resetTrimResult()
+                onTrimSuccess(state.uri)
+            }
+            is TrimResultUiState.Error -> {
+                dialogState = TrimVideoDialogState.Error(
+                    title = trimErrorTitle,
+                    message = state.message,
+                )
+                viewModel.resetTrimResult()
+            }
+            TrimResultUiState.StandBy -> Unit
         }
     }
 

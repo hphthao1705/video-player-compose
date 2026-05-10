@@ -1,5 +1,6 @@
 package com.example.playvideo.ui.trimVideo.uiState
 
+import android.net.Uri
 import com.example.playvideo.ui.trimVideo.uiModel.LocalVideoUiModel
 
 sealed class TrimVideoDialogState {
@@ -33,4 +34,11 @@ sealed class VideoNameUiState {
     object Loading: VideoNameUiState()
     object Error: VideoNameUiState()
     data class Success(val video: LocalVideoUiModel): VideoNameUiState()
+}
+
+sealed class TrimResultUiState {
+    data object StandBy : TrimResultUiState()
+    data object Loading : TrimResultUiState()
+    data class Success(val uri: Uri) : TrimResultUiState()
+    data class Error(val message: String) : TrimResultUiState()
 }
