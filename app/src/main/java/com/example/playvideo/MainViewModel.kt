@@ -1,5 +1,6 @@
 package com.example.playvideo
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,12 +17,19 @@ class MainViewModel @Inject constructor(): ViewModel() {
     private val _option = MutableStateFlow(VideoOption.Nothing)
     val option = _option.asStateFlow()
 
+    private val _finalVideo = MutableStateFlow<Uri?>(null)
+    val finalVideo = _finalVideo.asStateFlow()
+
     fun updateScreen(screen: AppScreen) {
         _currentScreen.update { screen }
     }
 
     fun updateOption(option: VideoOption) {
         _option.update { option }
+    }
+
+    fun updateFinalVideo(uri: Uri?) {
+        _finalVideo.update { uri }
     }
 }
 

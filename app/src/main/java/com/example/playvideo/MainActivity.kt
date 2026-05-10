@@ -1,6 +1,5 @@
 package com.example.playvideo
 
-import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Toast
@@ -9,10 +8,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import com.example.playvideo.ui.HomeScreen
 import com.example.playvideo.ui.chooseVideo.ChooseVideoScreen
 import com.example.playvideo.ui.trimVideo.TrimVideoScreen
@@ -31,10 +26,13 @@ class MainActivity : ComponentActivity() {
         videoViewModel.preloadBuiltInPreviews()
 
         setContent {
+            // MainViewModel
             val currentScreen = viewModel.currentScreen.collectAsState().value
+            val finalVideo = viewModel.finalVideo.collectAsState().value
+
+            // VideoViewModel
             val videoOption = viewModel.option.collectAsState().value
             val selectedVideo = videoViewModel.selectedVideo.collectAsState().value
-            var trimmedVideoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
             when (currentScreen) {
                 AppScreen.HOME -> {
@@ -60,7 +58,6 @@ class MainActivity : ComponentActivity() {
                             viewModel.updateScreen(AppScreen.HOME)
                         },
                         onStartTrim = { selectedUri ->
-//                            trimVideoUri = selectedUri
                             videoViewModel.changeSelectedVideo(
                                 context = applicationContext,
                                 uri = selectedUri
@@ -74,13 +71,12 @@ class MainActivity : ComponentActivity() {
                     val uri = selectedVideo?.uri
                     if (uri != null) {
                         TrimVideoScreen(
-//                            selectedVideoData = selectedVideo,
                             mode = videoOption,
                             onBack = {
                                 viewModel.updateScreen(AppScreen.CHOOSE_TRIM_VIDEO)
                             },
                             onTrimSuccess = { resultUri ->
-                                trimmedVideoUri = resultUri
+                                viewModel.updateFinalVideo(resultUri)
                                 viewModel.updateScreen(AppScreen.PLAY_RESULT_VIDEO)
                             },
                         )
@@ -90,7 +86,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 AppScreen.PLAY_RESULT_VIDEO -> {
-                    val uri = trimmedVideoUri
+                    val uri = finalVideo
                     if (uri != null) {
                         TrimmedVideoScreen(
                             videoUri = uri,
