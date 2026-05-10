@@ -30,7 +30,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.playvideo.R
 import com.example.playvideo.VideoPreviewViewModel
-import com.example.playvideo.data.VideoInfoData
+import com.example.playvideo.data.AvailableVideoInfoData
 import com.example.playvideo.data.videos
 import com.example.playvideo.ui.chooseVideo.layout.AvailableVideosLoading
 import com.example.playvideo.ui.chooseVideo.layout.AvailableVideosSection
@@ -135,8 +135,8 @@ fun ChooseVideoScreen(
 
 @Composable
 private fun ChooseAvailableVideosSection(
-    selected: VideoInfoData?,
-    onSelectVideo: (VideoInfoData) -> Unit,
+    selected: AvailableVideoInfoData?,
+    onSelectVideo: (AvailableVideoInfoData) -> Unit,
 ) {
     val viewModel: VideoPreviewViewModel = hiltViewModel()
     val availableVideos by viewModel.availableVideosUiState.collectAsStateWithLifecycle()

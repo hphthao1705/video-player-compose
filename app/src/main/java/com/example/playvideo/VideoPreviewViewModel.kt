@@ -5,7 +5,7 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.playvideo.data.VideoInfoData
+import com.example.playvideo.data.AvailableVideoInfoData
 import com.example.playvideo.data.videos
 import com.example.playvideo.ui.chooseVideo.uiState.ChooseVideoUiState
 import com.example.playvideo.util.VideoHelper.isLikelyVideoSource
@@ -26,15 +26,15 @@ class VideoPreviewViewModel @Inject constructor(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val availableVideos = arrayListOf<VideoInfoData>()
+    private val availableVideos = arrayListOf<AvailableVideoInfoData>()
 
     private val _availableVideosUiState = MutableStateFlow<ChooseVideoUiState>(ChooseVideoUiState.StandBy)
     val availableVideosUiState: StateFlow<ChooseVideoUiState> = _availableVideosUiState.asStateFlow()
 
-    private val _selectedVideo = MutableStateFlow<VideoInfoData?>(null)
-    val selectedVideo: StateFlow<VideoInfoData?> = _selectedVideo.asStateFlow()
+    private val _selectedVideo = MutableStateFlow<AvailableVideoInfoData?>(null)
+    val selectedVideo: StateFlow<AvailableVideoInfoData?> = _selectedVideo.asStateFlow()
 
-    fun selectVideo(video: VideoInfoData) {
+    fun selectVideo(video: AvailableVideoInfoData) {
         availableVideos.replaceAll { it.copy(isSelected = it.url == video.url) }
         _selectedVideo.update { video }
         _availableVideosUiState.update {
@@ -49,7 +49,7 @@ class VideoPreviewViewModel @Inject constructor(
             _availableVideosUiState.update { current ->
                 if (current is ChooseVideoUiState.Success) ChooseVideoUiState.Success(availableVideos.toList()) else current
             }
-            _selectedVideo.update { VideoInfoData(url = uri.toString(), previewBitmap = bitmap) }
+            _selectedVideo.update { AvailableVideoInfoData(url = uri.toString(), previewBitmap = bitmap) }
         }
     }
 
@@ -60,10 +60,10 @@ class VideoPreviewViewModel @Inject constructor(
             _availableVideosUiState.update { ChooseVideoUiState.Loading }
 
             val sources = videos.filter(::isLikelyVideoSource)
-            val processedVideos: List<VideoInfoData> = sources.mapIndexed { index, source ->
+            val processedVideos: List<AvailableVideoInfoData> = sources.mapIndexed { index, source ->
                 async {
                     val bitmap = loadPreviewBitmap(getApplication(), source.toUri())
-                    VideoInfoData(label = "Sample video ${index + 1}", url = source, previewBitmap = bitmap)
+                    AvailableVideoInfoData(label = "Sample video ${index + 1}", url = source, previewBitmap = bitmap)
                 }
             }.awaitAll()
 
