@@ -66,7 +66,6 @@ fun TrimVideoScreen(
 
     LaunchedEffect(selectedVideo) {
         selectedVideo?.uri?.let { uri ->
-            // prepare for player first (faster)
             player.setMediaItem(MediaItem.fromUri(uri))
             player.prepare()
         }
@@ -102,7 +101,7 @@ fun TrimVideoScreen(
         }
     }
 
-    // debounce seeks so ExoPlayer isn't called on every drag pixel (~60/sec).
+    // Debounce seeks so ExoPlayer isn't called on every drag pixel (~60/sec).
     LaunchedEffect(Unit) {
         snapshotFlow { selectedVideo?.seekTo.orZero() }
             .filter { it >= 0L }
@@ -201,7 +200,7 @@ fun TrimVideoScreen(
                             VideoOption.Compress ->
                                 viewModel.updateDialogState(DialogState.AskSelectOptionTo)
 
-                           else -> Unit
+                            else -> Unit
                         }
                     },
                 )
@@ -220,7 +219,9 @@ fun TrimVideoScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 24.dp, bottom = 32.dp),
-                    frameBitmaps = selectedVideo?.previewBitmaps ?: emptyList(),
+                    // null while video metadata is still loading → shows shimmer skeleton
+                    // emptyList if loaded but no frames were extracted → shows plain placeholder
+                    frameBitmaps = selectedVideo?.previewBitmaps,
                     startSeekTime = selectedVideo?.startTrimMs.orZero(),
                     endSeekTime = selectedVideo?.endTrimMs.orZero(),
                     videoDuration = selectedVideo?.duration.orZero(),

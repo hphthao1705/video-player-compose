@@ -44,6 +44,7 @@ fun PreviewSection(
     var isPlaying by remember { mutableStateOf(false) }
     var hasStartedPlayback by remember { mutableStateOf(false) }
     var isBuffering by remember { mutableStateOf(false) }
+    var isPlayerReady by remember { mutableStateOf(false) }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -61,6 +62,7 @@ fun PreviewSection(
                     else -> "UNKNOWN($playbackState)"
                 }
                 "VideoPlayer: onPlaybackStateChanged=$stateName playWhenReady=${player.playWhenReady}".debugLog()
+                isPlayerReady = playbackState == Player.STATE_READY || playbackState == Player.STATE_ENDED
                 isBuffering = playbackState == Player.STATE_BUFFERING && player.playWhenReady
             }
 
@@ -88,6 +90,7 @@ fun PreviewSection(
             .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
+        // Video player (shown once playback has started)
         if (hasStartedPlayback) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
@@ -103,6 +106,7 @@ fun PreviewSection(
             )
         }
 
+        // Static thumbnail before playback starts
         if (!hasStartedPlayback && previewBitmap != null) {
             Image(
                 bitmap = previewBitmap.asImageBitmap(),
@@ -112,7 +116,8 @@ fun PreviewSection(
             )
         }
 
-        if (isBuffering) {
+        // Loading spinner — shown only after a video is selected and player is still preparing
+        if (previewBitmap != null && !isPlayerReady) {
             CircularProgressIndicator(
                 modifier = Modifier.size(40.dp),
                 color = Color.White,
@@ -120,7 +125,17 @@ fun PreviewSection(
             )
         }
 
-        if (!isPlaying && !isBuffering) {
+        // Buffering spinner — shown while playing and buffering mid-stream
+        if (isPlayerReady && isBuffering) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(40.dp),
+                color = Color.White,
+                strokeWidth = 3.dp,
+            )
+        }
+
+        // "Tap to play" hint — only shown when ready and not playing
+        if (isPlayerReady && !isPlaying && !isBuffering) {
             Text(
                 text = stringResource(R.string.tap_to_play),
                 color = Color.White,
@@ -130,22 +145,25 @@ fun PreviewSection(
             )
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable {
-                    val playWhenReady = player.playWhenReady
-                    val playbackState = player.playbackState
-                    "VideoPlayer: tap — playWhenReady=$playWhenReady playbackState=$playbackState isPlaying=$isPlaying".debugLog()
-                    if (playWhenReady && playbackState != Player.STATE_IDLE && playbackState != Player.STATE_ENDED) {
-                        player.pause()
-                        isPlaying = false
-                    } else {
-                        player.play()
-                        hasStartedPlayback = true
-                        isBuffering = player.playbackState == Player.STATE_BUFFERING
-                    }
-                },
-        )
+        // Tap overlay — only active once player is ready
+        if (isPlayerReady) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable {
+                        val playWhenReady = player.playWhenReady
+                        val playbackState = player.playbackState
+                        "VideoPlayer: tap — playWhenReady=$playWhenReady playbackState=$playbackState isPlaying=$isPlaying".debugLog()
+                        if (playWhenReady && playbackState != Player.STATE_IDLE && playbackState != Player.STATE_ENDED) {
+                            player.pause()
+                            isPlaying = false
+                        } else {
+                            player.play()
+                            hasStartedPlayback = true
+                            isBuffering = player.playbackState == Player.STATE_BUFFERING
+                        }
+                    },
+            )
+        }
     }
 }

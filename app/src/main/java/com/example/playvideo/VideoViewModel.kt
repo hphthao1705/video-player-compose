@@ -42,12 +42,11 @@ class VideoViewModel @Inject constructor(
     private val _selectedVideo = MutableStateFlow<VideoInfoData?>(null)
     val selectedVideo: StateFlow<VideoInfoData?> = _selectedVideo.asStateFlow()
 
+    private val _isPreparingVideo = MutableStateFlow(false)
+    val isPreparingVideo = _isPreparingVideo.asStateFlow()
+
     fun updateSelectedVideo(transformer: (VideoInfoData) -> VideoInfoData) {
-        _selectedVideo.update { currentVideo ->
-            // If currentVideo is null, we can't transform it,
-            // so you might need a null-safe check here depending on your logic
-            currentVideo?.let(transformer)
-        }
+        _selectedVideo.update { current -> current?.let(transformer) }
     }
 
     fun setSelectedVideo(video: VideoInfoData) {
@@ -55,84 +54,76 @@ class VideoViewModel @Inject constructor(
     }
 
     fun changeSelectedVideo(context: Context, uri: Uri?) {
-        // TODO: Handle error here
         uri ?: return
-
         viewModelScope.launch(Dispatchers.IO) {
+            _isPreparingVideo.update { true }
             val info = getVideoInfo(context = context, uri = uri)
-            info?.let { videoData ->
-                setSelectedVideo(video = videoData)
-            }
+            info?.let { setSelectedVideo(it) }
+            _isPreparingVideo.update { false }
         }
     }
 
-    private suspend fun getVideoInfo(context: Context, uri: Uri): VideoInfoData? = withContext(Dispatchers.IO) {
-        val videoTitle = getVideoName(context = context, uri = uri)
-        val videoDuration = getVideoDuration(context = context, uri = uri)
-        val videoMetadata = getVideoMetaData(context = context, inputUri = uri)
-        val previewBitmaps = extractVideoFrames(
-            context = context,
-            uri = uri,
-            frameCount = 8
-        )
-
-        return@withContext VideoInfoData(
-            name = videoTitle,
-            uri = uri,
-            duration = videoDuration,
-            width = videoMetadata.width,
-            height = videoMetadata.height,
-            fps = videoMetadata.fps,
-            bitrateKbps = videoMetadata.bitrateKbps,
-            sizeMb = videoMetadata.sizeMb,
-            previewBitmaps = previewBitmaps
-        )
-    }
-
-//    fun selectVideo(video: AvailableVideoInfoData) {
-//        availableVideos.replaceAll { it.copy(isSelected = it.url == video.url) }
-////        _selectedVideo.update { video }
-//        _availableVideosUiState.update {
-//            ChooseVideoUiState.Success(availableVideos.toList())
-//        }
-//    }
+    private suspend fun getVideoInfo(context: Context, uri: Uri): VideoInfoData? =
+        withContext(Dispatchers.IO) {
+            val videoTitle = getVideoName(context = context, uri = uri)
+            val videoDuration = getVideoDuration(context = context, uri = uri)
+            val videoMetadata = getVideoMetaData(context = context, inputUri = uri)
+            val previewBitmaps = extractVideoFrames(
+                context = context,
+                uri = uri,
+                frameCount = 8
+            )
+            VideoInfoData(
+                name = videoTitle,
+                uri = uri,
+                duration = videoDuration,
+                width = videoMetadata.width,
+                height = videoMetadata.height,
+                fps = videoMetadata.fps,
+                bitrateKbps = videoMetadata.bitrateKbps,
+                sizeMb = videoMetadata.sizeMb,
+                previewBitmaps = previewBitmaps,
+            )
+        }
 
     fun previewLocalVideo(uri: Uri) {
         viewModelScope.launch {
             val bitmap: Bitmap? = loadPreviewBitmap(getApplication(), uri)
             availableVideos.replaceAll { it.copy(isSelected = false) }
             _availableVideosUiState.update { current ->
-                if (current is ChooseVideoUiState.Success) ChooseVideoUiState.Success(availableVideos.toList()) else current
+                if (current is ChooseVideoUiState.Success)
+                    ChooseVideoUiState.Success(availableVideos.toList())
+                else current
             }
-
             if (bitmap != null) {
-                _selectedVideo.update { VideoInfoData(uri = uri, previewBitmaps = listOf<Bitmap>(bitmap)) }
+                _selectedVideo.update {
+                    VideoInfoData(uri = uri, previewBitmaps = listOf(bitmap))
+                }
             }
         }
     }
 
     fun preloadBuiltInPreviews() {
         if (availableVideos.isNotEmpty()) return
-
         viewModelScope.launch(Dispatchers.Default) {
             _availableVideosUiState.update { ChooseVideoUiState.Loading }
-
             val sources = videos.filter(::isLikelyVideoSource)
-            val processedVideos: List<AvailableVideoInfoData> = sources.mapIndexed { index, source ->
+            val processedVideos = sources.mapIndexed { index, source ->
                 async {
                     val bitmap = loadPreviewBitmap(getApplication(), source.toUri())
-                    AvailableVideoInfoData(label = "Sample video ${index + 1}", url = source, previewBitmap = bitmap)
+                    AvailableVideoInfoData(
+                        label = "Sample video ${index + 1}",
+                        url = source,
+                        previewBitmap = bitmap,
+                    )
                 }
             }.awaitAll()
-
             availableVideos.addAll(processedVideos)
-
             _availableVideosUiState.update {
-                if (availableVideos.isEmpty()) {
+                if (availableVideos.isEmpty())
                     ChooseVideoUiState.Error("No videos available")
-                } else {
+                else
                     ChooseVideoUiState.Success(availableVideos.toList())
-                }
             }
         }
     }

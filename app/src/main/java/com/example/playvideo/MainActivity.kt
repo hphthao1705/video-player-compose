@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
 import com.example.playvideo.ui.HomeScreen
@@ -24,25 +25,31 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED)
-        // TODO: add again when have time
-//        videoViewModel.preloadBuiltInPreviews()
 
         setContent {
             val context = LocalContext.current
 
-            // MainViewModel
             val currentScreen = viewModel.currentScreen.collectAsState().value
             val finalVideo = viewModel.finalVideo.collectAsState().value
-
-            // VideoViewModel
             val videoOption = viewModel.option.collectAsState().value
             val selectedVideo = videoViewModel.selectedVideo.collectAsState().value
+            val isPreparingVideo = videoViewModel.isPreparingVideo.collectAsState().value
+
+            // Navigate to trim screen only after video data is fully prepared —
+            // this eliminates the first loading phase on TrimVideoScreen.
+            LaunchedEffect(isPreparingVideo, selectedVideo) {
+                if (currentScreen == AppScreen.PREPARING_VIDEO
+                    && !isPreparingVideo
+                    && selectedVideo != null
+                ) {
+                    viewModel.updateScreen(AppScreen.TRIM_VIDEO)
+                }
+            }
 
             when (currentScreen) {
                 AppScreen.HOME -> {
                     HomeScreen(
                         onPlayVideo = {
-                            // TODO: Navigate to player screen
                             Toast.makeText(this, "Play Video", Toast.LENGTH_SHORT).show()
                         },
                         onTrimVideo = {
@@ -58,16 +65,31 @@ class MainActivity : ComponentActivity() {
 
                 AppScreen.CHOOSE_TRIM_VIDEO -> {
                     ChooseVideoScreen(
+                        isPreparingVideo = isPreparingVideo,
                         onBack = {
                             viewModel.updateScreen(AppScreen.HOME)
                         },
                         onStartTrim = { selectedUri ->
+                            // Kick off IO preparation, then wait — LaunchedEffect above navigates
+                            // once both isPreparingVideo == false and selectedVideo != null.
                             videoViewModel.changeSelectedVideo(
                                 context = context,
-                                uri = selectedUri
+                                uri = selectedUri,
                             )
-                            viewModel.updateScreen(AppScreen.TRIM_VIDEO)
+                            viewModel.updateScreen(AppScreen.PREPARING_VIDEO)
                         },
+                    )
+                }
+
+                // Intermediate state: data is being fetched, still showing ChooseVideoScreen
+                // with a loading overlay so the user has visual feedback.
+                AppScreen.PREPARING_VIDEO -> {
+                    ChooseVideoScreen(
+                        isPreparingVideo = true,
+                        onBack = {
+                            viewModel.updateScreen(AppScreen.HOME)
+                        },
+                        onStartTrim = {},
                     )
                 }
 
@@ -110,6 +132,7 @@ class MainActivity : ComponentActivity() {
 enum class AppScreen {
     HOME,
     CHOOSE_TRIM_VIDEO,
+    PREPARING_VIDEO,      // IO in progress — still showing ChooseVideoScreen with loading overlay
     TRIM_VIDEO,
     PLAY_RESULT_VIDEO,
 }
