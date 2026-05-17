@@ -26,6 +26,8 @@ import com.example.playvideo.R
 import com.example.playvideo.data.AvailableVideoInfoData
 import com.example.playvideo.util.AppDimension.DIMENSION_12
 import com.example.playvideo.util.AppDimension.DIMENSION_18
+import com.example.playvideo.util.AppDimension.DIMENSION_4
+import com.example.playvideo.util.AppDimension.DIMENSION_8
 import com.example.playvideo.util.shimmerLoading
 
 @Composable
@@ -46,8 +48,8 @@ fun AvailableVideosSection(
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp),
-        contentPadding = PaddingValues(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = DIMENSION_4),
+        verticalArrangement = Arrangement.spacedBy(DIMENSION_8),
     ) {
         itemsIndexed(videos) { _, option ->
             val isSelected = selectedVideo?.url == option.url
@@ -77,13 +79,13 @@ fun AvailableVideosLoading(itemCount: Int) {
         style = MaterialTheme.typography.bodyMedium,
     )
 
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(DIMENSION_8))
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .height(180.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(DIMENSION_8),
     ) {
         repeat(itemCount) {
             Card(
@@ -95,7 +97,7 @@ fun AvailableVideosLoading(itemCount: Int) {
                         .padding(DIMENSION_12)
                         .fillMaxWidth(0.55f)
                         .height(DIMENSION_18)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(DIMENSION_4))
                         .shimmerLoading(),
                 )
             }
