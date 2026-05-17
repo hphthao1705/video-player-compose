@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.playvideo.util.AppDimension.DIMENSION_20
 import com.example.playvideo.util.AppDimension.DIMENSION_24
+import com.example.playvideo.util.AppDimension.DIMENSION_36
 import com.example.playvideo.util.AppDimension.DIMENSION_8
 import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
 import com.example.playvideo.util.MathHelper.toTimestamp
