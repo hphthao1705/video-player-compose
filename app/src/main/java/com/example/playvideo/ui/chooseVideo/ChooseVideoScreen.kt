@@ -46,6 +46,7 @@ import com.example.playvideo.ui.chooseVideo.layout.StartTrimVideoSection
 import com.example.playvideo.util.AppDimension.DIMENSION_12
 import com.example.playvideo.util.AppDimension.DIMENSION_16
 import com.example.playvideo.util.AppDimension.DIMENSION_3
+import com.example.playvideo.util.AppDimension.DIMENSION_48
 import com.example.playvideo.util.AppDimension.DIMENSION_8
 import com.example.playvideo.util.VideoHelper.debugLog
 import kotlinx.coroutines.launch
@@ -151,7 +152,7 @@ fun ChooseVideoScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(DIMENSION_48),
                         color = TrimColorPrimary,
                         strokeWidth = DIMENSION_3,
                     )
