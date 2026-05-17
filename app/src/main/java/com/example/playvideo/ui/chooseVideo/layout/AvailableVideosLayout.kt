@@ -24,6 +24,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.playvideo.R
 import com.example.playvideo.data.AvailableVideoInfoData
+import com.example.playvideo.util.AppDimension.DIMENSION_12
+import com.example.playvideo.util.AppDimension.DIMENSION_18
 import com.example.playvideo.util.shimmerLoading
 
 @Composable
@@ -60,7 +62,7 @@ fun AvailableVideosSection(
                 Text(
                     text = option.label.orEmpty(),
                     color = Color.White,
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier.padding(DIMENSION_12),
                 )
             }
         }
@@ -90,9 +92,9 @@ fun AvailableVideosLoading(itemCount: Int) {
             ) {
                 Box(
                     modifier = Modifier
-                        .padding(12.dp)
+                        .padding(DIMENSION_12)
                         .fillMaxWidth(0.55f)
-                        .height(18.dp)
+                        .height(DIMENSION_18)
                         .clip(RoundedCornerShape(4.dp))
                         .shimmerLoading(),
                 )

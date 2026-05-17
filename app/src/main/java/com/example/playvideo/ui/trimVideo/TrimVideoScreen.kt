@@ -39,6 +39,7 @@ import com.example.playvideo.ui.trimVideo.layout.TrimVideoTopBar
 import com.example.playvideo.ui.trimVideo.uiState.TrimResultUiState
 import com.example.playvideo.ui.trimVideo.uiState.DialogState
 import com.example.playvideo.ui.trimVideo.uiState.TrimVideoOption
+import com.example.playvideo.util.AppDimension.DIMENSION_16
 import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
 import com.example.playvideo.util.MathHelper.orZero
 
@@ -205,7 +206,7 @@ fun TrimVideoScreen(
                     },
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(DIMENSION_16))
 
                 TrimVideoPlayer(
                     modifier = Modifier
