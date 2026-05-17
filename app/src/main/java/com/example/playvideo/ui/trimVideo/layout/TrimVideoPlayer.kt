@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.example.playvideo.util.AppDimension.DIMENSION_16
+import com.example.playvideo.util.AppDimension.DIMENSION_8
 import com.example.playvideo.util.shimmerLoading
 
 @Composable
@@ -29,15 +31,15 @@ fun TrimVideoPlayer(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .padding(horizontal = DIMENSION_16)
+                    .clip(RoundedCornerShape(DIMENSION_8))
                     .shimmerLoading(),
             )
         } else {
             AndroidView(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = DIMENSION_16),
                 factory = { context ->
                     PlayerView(context).apply {
                         useController = false

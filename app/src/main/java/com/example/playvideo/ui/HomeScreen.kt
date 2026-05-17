@@ -29,6 +29,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.playvideo.R
+import com.example.playvideo.util.AppDimension.DIMENSION_16
+import com.example.playvideo.util.AppDimension.DIMENSION_24
+import com.example.playvideo.util.AppDimension.DIMENSION_40
+import com.example.playvideo.util.AppDimension.DIMENSION_48
 
 // ── Color tokens ────────────────────────────────────────────────────────────
 private val BgPage      = Color(0xFF0D0D0D)
@@ -80,10 +84,10 @@ fun HomeScreen(
             .fillMaxSize()
             .background(BgPage)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = DIMENSION_24),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(48.dp))
+        Spacer(Modifier.height(DIMENSION_48))
 
         // ── Header ──────────────────────────────────────────────────────────
         Text(
@@ -99,15 +103,15 @@ fun HomeScreen(
             color = TextMuted,
             fontSize = 14.sp,
         )
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(DIMENSION_40))
 
         // ── Option cards ────────────────────────────────────────────────────
         options.forEach { option ->
             OptionCard(option)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(DIMENSION_16))
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(DIMENSION_24))
     }
 }
 
@@ -125,7 +129,7 @@ private fun OptionCard(option: HomeOption) {
         modifier = Modifier
             .fillMaxWidth()
             .scale(scale)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(DIMENSION_16))
             .background(BgCard)
             .clickable(
                 interactionSource = interactionSource,
@@ -155,7 +159,7 @@ private fun OptionCard(option: HomeOption) {
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = DIMENSION_16),
         ) {
             Text(
                 text = option.title,

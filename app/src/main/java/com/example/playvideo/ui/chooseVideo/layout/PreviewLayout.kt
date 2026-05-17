@@ -34,6 +34,8 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.playvideo.R
+import com.example.playvideo.util.AppDimension.DIMENSION_16
+import com.example.playvideo.util.AppDimension.DIMENSION_3
 import com.example.playvideo.util.VideoHelper.debugLog
 
 @Composable
@@ -86,7 +88,7 @@ fun PreviewSection(
         modifier = Modifier
             .fillMaxWidth()
             .height(220.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(DIMENSION_16))
             .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
@@ -121,7 +123,7 @@ fun PreviewSection(
             CircularProgressIndicator(
                 modifier = Modifier.size(40.dp),
                 color = Color.White,
-                strokeWidth = 3.dp,
+                strokeWidth = DIMENSION_3,
             )
         }
 
@@ -130,7 +132,7 @@ fun PreviewSection(
             CircularProgressIndicator(
                 modifier = Modifier.size(40.dp),
                 color = Color.White,
-                strokeWidth = 3.dp,
+                strokeWidth = DIMENSION_3,
             )
         }
 

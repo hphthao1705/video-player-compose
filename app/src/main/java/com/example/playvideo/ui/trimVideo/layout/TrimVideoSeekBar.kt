@@ -46,7 +46,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.playvideo.util.AppDimension.DIMENSION_20
 import com.example.playvideo.util.AppDimension.DIMENSION_24
+import com.example.playvideo.util.AppDimension.DIMENSION_8
 import com.example.playvideo.util.AppVideoUtil.MAX_ALLOWED_TRIM_TIME
 import com.example.playvideo.util.MathHelper.toTimestamp
 import com.example.playvideo.util.shimmerLoading
@@ -67,7 +69,7 @@ fun TrimVideoSeekBar(
     onEndTimeChange: (Long) -> Unit,
 ) {
     val seekBarHeight = 64.dp
-    val labelHeight = 20.dp
+    val labelHeight = DIMENSION_20
 
     // ── Still loading — show shimmer skeleton ────────────────────────────────
     if (frameBitmaps == null) {
@@ -92,13 +94,13 @@ fun TrimVideoSeekBar(
                     .height(seekBarHeight)
                     .align(Alignment.TopStart)
                     .offset(y = labelHeight + 4.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(DIMENSION_8))
                     .shimmerLoading(),
             )
             // Bottom timestamp label shimmer
             Box(
                 modifier = Modifier
-                    .width(36.dp)
+                    .width(DIMENSION_36)
                     .height(labelHeight)
                     .align(Alignment.TopEnd)
                     .offset(y = labelHeight + 4.dp + seekBarHeight + 4.dp)

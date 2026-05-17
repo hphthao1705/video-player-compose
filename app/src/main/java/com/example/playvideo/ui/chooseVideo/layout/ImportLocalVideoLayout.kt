@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.playvideo.R
 import com.example.playvideo.VideoViewModel
+import com.example.playvideo.util.AppDimension.DIMENSION_12
 
 @Composable
 fun ImportLocalVideoSection() {
@@ -38,7 +39,7 @@ fun ImportLocalVideoSection() {
         style = MaterialTheme.typography.bodySmall,
     )
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(DIMENSION_12))
 
     ImportLocalVideoSection(
         onImportLocalVideo = onLaunchVideo
@@ -52,7 +53,7 @@ private fun ImportLocalVideoSection(
     OutlinedButton(
         onClick = onImportLocalVideo,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(DIMENSION_12),
     ) {
         Text(text = stringResource(R.string.import_local_video))
     }

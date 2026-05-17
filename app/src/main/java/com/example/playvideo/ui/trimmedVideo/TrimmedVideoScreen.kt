@@ -31,6 +31,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.playvideo.R
+import com.example.playvideo.util.AppDimension.DIMENSION_16
 
 private val TrimmedColorBackground = Color(0xFF0D0D0D)
 private val TrimmedColorText = Color.White
@@ -70,7 +71,7 @@ fun TrimmedVideoScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = DIMENSION_16),
                     factory = { ctx ->
                         PlayerView(ctx).apply {
                             useController = true

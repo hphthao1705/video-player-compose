@@ -43,6 +43,10 @@ import com.example.playvideo.ui.chooseVideo.layout.ChooseVideoHeaderSection
 import com.example.playvideo.ui.chooseVideo.layout.ImportLocalVideoSection
 import com.example.playvideo.ui.chooseVideo.layout.PreviewSection
 import com.example.playvideo.ui.chooseVideo.layout.StartTrimVideoSection
+import com.example.playvideo.util.AppDimension.DIMENSION_12
+import com.example.playvideo.util.AppDimension.DIMENSION_16
+import com.example.playvideo.util.AppDimension.DIMENSION_3
+import com.example.playvideo.util.AppDimension.DIMENSION_8
 import com.example.playvideo.util.VideoHelper.debugLog
 import kotlinx.coroutines.launch
 
@@ -101,17 +105,17 @@ fun ChooseVideoScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(16.dp),
+                    .padding(DIMENSION_16),
             ) {
                 ChooseVideoHeaderSection(onBack = onBack)
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(DIMENSION_8))
 
                 ImportLocalVideoSection()
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(DIMENSION_12))
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(DIMENSION_12))
 
                 key(selectedVideo?.uri) {
                     PreviewSection(
@@ -149,9 +153,9 @@ fun ChooseVideoScreen(
                     CircularProgressIndicator(
                         modifier = Modifier.size(48.dp),
                         color = TrimColorPrimary,
-                        strokeWidth = 3.dp,
+                        strokeWidth = DIMENSION_3,
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(DIMENSION_16))
                     Text(
                         text = "Preparing video…",
                         color = Color.White,
